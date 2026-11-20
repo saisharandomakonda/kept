@@ -59,7 +59,7 @@ modules:
   rovo:agent:
     - key: kept-agent
       name: Kept
-      description: Tracks promises support makes to customers about fixes, warns when the developer plan slips, and drafts honest customer updates.
+      description: "Tracks promises support makes to customers about fixes, warns when the developer plan slips, and drafts honest customer updates."
       prompt: resource:agent-prompt;prompt.md
       conversationStarters:
         - Which customer promises are at risk this week?
@@ -75,100 +75,89 @@ modules:
   action:
     - key: get-promise-context
       name: Get promise context
-      function: rovo-get-promise-context
+      function: rovo-get-context
       actionVerb: GET
-      description: >
-        Returns the fix chain behind a Jira Service Management request: the request and customer, the linked developer
-        work items with status, sprint, release and due date, and every promise made to the customer with its risk,
-        expected fix date and plain-language reasons. Also works on a developer work item, returning the customers waiting on it.
+      description: "Returns the fix chain behind a service request: the customer, linked developer work items (status, sprint, release, due date) and every promise made to the customer with risk, expected fix date and reasons."
       inputs:
         requestKey:
           title: Request or work item key
           type: string
           required: false
-          description: The key, for example SUP-12. Leave empty to use the work item the user is looking at.
+          description: "The key, for example SUP-12. Leave empty to use the work item the user is looking at."
     - key: list-promises-at-risk
       name: List promises at risk
-      function: rovo-list-promises-at-risk
+      function: rovo-list-at-risk
       actionVerb: GET
-      description: >
-        Lists open customer promises that are at risk, broken, tight, or due within the next N days, with the customer,
-        request key, promised date, expected fix date and the reason. Use it for questions like "which promises are at risk this week".
+      description: "Lists open customer promises that are at risk, broken, tight or due within N days, with customer, request key, promised date, expected fix date and the reason."
       inputs:
         days:
           title: Days ahead
           type: integer
           required: false
-          description: How many days ahead to include promises that are due. Default 7.
+          description: "How many days ahead to include promises that are due. Default 7."
         projectKey:
           title: Service space key
           type: string
           required: false
-          description: Limit to one service space, for example SUP. Leave empty for all spaces.
+          description: "Limit to one service space, for example SUP. Leave empty for all spaces."
     - key: find-promises-in-request
       name: Find promises in a request
       function: rovo-find-promises
       actionVerb: GET
-      description: >
-        Returns the public replies support agents posted on a request, with rule-based promise candidates (dates found next to
-        commitments like "fixed by Friday") and the promise dates already tracked, so you can spot untracked promises.
+      description: "Returns the public replies agents posted on a request, with rule-based promise candidates and the promise dates already tracked, to spot untracked promises."
       inputs:
         requestKey:
           title: Request key
           type: string
           required: false
-          description: The request key, for example SUP-12. Leave empty to use the open request.
+          description: "The request key, for example SUP-12. Leave empty to use the open request."
     - key: track-promise
       name: Track a promise
       function: rovo-track-promise
       actionVerb: CREATE
-      description: >
-        Starts tracking a promise made to a customer on a request: the date the fix was promised and what was said.
-        Kept then checks it against the linked developer work and warns if the plan slips. Confirm the date with the user first.
+      description: "Starts tracking a promise made to a customer on a request (promised date and what was said). Kept then warns if the developer plan slips. Confirm the date with the user first."
       inputs:
         requestKey:
           title: Request key
           type: string
           required: true
-          description: The service request key, for example SUP-12.
+          description: "The service request key, for example SUP-12."
         promisedDate:
           title: Promised date
           type: string
           required: true
-          description: The date the fix was promised, in YYYY-MM-DD form.
+          description: "The date the fix was promised, in YYYY-MM-DD form."
         promiseText:
           title: What was promised
           type: string
           required: false
-          description: The sentence the promise came from.
+          description: "The sentence the promise came from."
         devIssueKey:
           title: Developer work item key
           type: string
           required: false
-          description: The linked developer work item the fix depends on. Leave empty to use the first linked one.
+          description: "The linked developer work item the fix depends on. Leave empty to use the first linked one."
     - key: post-customer-update
       name: Send customer update
-      function: rovo-post-customer-update
+      function: rovo-post-update
       actionVerb: CREATE
-      description: >
-        Posts a reply that the customer can see on the request, as the signed-in agent, and records that the customer was
-        updated. Optionally tracks a new promised date. Only call after the user approved the exact message.
+      description: "Posts a reply the customer can see on the request, as the signed-in agent, and records the update. Optionally tracks a new promised date. Only call after the user approved the exact text."
       inputs:
         requestKey:
           title: Request key
           type: string
           required: true
-          description: The service request key, for example SUP-12.
+          description: "The service request key, for example SUP-12."
         message:
           title: Message
           type: string
           required: true
-          description: The exact message the user approved. No internal details.
+          description: "The exact message the user approved. No internal details."
         newPromisedDate:
           title: New promised date
           type: string
           required: false
-          description: A new date shared with the customer, in YYYY-MM-DD form. Kept tracks it as the new promise.
+          description: "A new date shared with the customer, in YYYY-MM-DD form. Kept tracks it as the new promise."
 
   # ---------- JQL: keptRisk, keptPromiseDate, keptWaiting, ... ----------
   jira:entityProperty:
@@ -255,15 +244,15 @@ modules:
       timeoutSeconds: 300
     - key: on-lifecycle
       handler: index.onLifecycle
-    - key: rovo-get-promise-context
+    - key: rovo-get-context
       handler: index.getPromiseContext
-    - key: rovo-list-promises-at-risk
+    - key: rovo-list-at-risk
       handler: index.listPromisesAtRisk
     - key: rovo-find-promises
       handler: index.findPromisesInRequest
     - key: rovo-track-promise
       handler: index.trackPromiseAction
-    - key: rovo-post-customer-update
+    - key: rovo-post-update
       handler: index.postCustomerUpdate
 
 resources:
@@ -285,35 +274,59 @@ app:
     name: nodejs24.x
     memoryMB: 256
     architecture: arm64
-  id: ari:cloud:ecosystem::app/11111111-1111-4111-8111-111111111111
+  id: ari:cloud:ecosystem::app/3471444e-dcdc-45df-867b-a9624ec8ceb4
   storage:
     entities:
       - name: promise
         attributes:
-          id: { type: string }
-          requestKey: { type: string }
-          requestId: { type: string }
-          projectKey: { type: string }
-          devIssueKey: { type: string }
-          customer: { type: string }
-          promisedDate: { type: string }
-          text: { type: string }
-          source: { type: string }
-          sourceCommentId: { type: string }
-          madeBy: { type: string }
-          madeAt: { type: string }
-          state: { type: string }
-          risk: { type: string }
-          riskRank: { type: integer }
-          expectedDate: { type: string }
-          expectedSource: { type: string }
-          reasons: { type: any }
-          lastAlertedRisk: { type: string }
-          customerToldAt: { type: string }
-          history: { type: any }
-          replacedBy: { type: string }
-          replaces: { type: string }
-          updatedAt: { type: string }
+          id:
+            type: string
+          requestKey:
+            type: string
+          requestId:
+            type: string
+          projectKey:
+            type: string
+          devIssueKey:
+            type: string
+          customer:
+            type: string
+          promisedDate:
+            type: string
+          text:
+            type: string
+          source:
+            type: string
+          sourceCommentId:
+            type: string
+          madeBy:
+            type: string
+          madeAt:
+            type: string
+          state:
+            type: string
+          risk:
+            type: string
+          riskRank:
+            type: integer
+          expectedDate:
+            type: string
+          expectedSource:
+            type: string
+          reasons:
+            type: any
+          lastAlertedRisk:
+            type: string
+          customerToldAt:
+            type: string
+          history:
+            type: any
+          replacedBy:
+            type: string
+          replaces:
+            type: string
+          updatedAt:
+            type: string
         indexes:
           - name: by-request
             partition:
