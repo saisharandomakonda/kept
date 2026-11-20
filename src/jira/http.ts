@@ -4,16 +4,30 @@ import api, { type Route } from '@forge/api';
 
 export type Actor = 'app' | 'user';
 
+/** Pulls the human-readable part out of a Jira error body. */
+export function jiraErrorText(body: string): string {
+  try {
+    const j = JSON.parse(body) as { errorMessage?: string; errorMessages?: string[]; errors?: Record<string, string>; message?: string };
+    const parts = [j.errorMessage, j.message, ...(j.errorMessages ?? []), ...Object.values(j.errors ?? {})].filter(Boolean);
+    if (parts.length > 0) return parts.join(' ');
+  } catch {
+    // not JSON
+  }
+  return body.slice(0, 300);
+}
+
 export class JiraError extends Error {
   constructor(
     readonly status: number,
     readonly path: string,
     readonly body: string
   ) {
-    super(`Jira ${status} on ${path}: ${body.slice(0, 300)}`);
+    super(`Jira ${status} on ${path}: ${jiraErrorText(body)}`);
     this.name = 'JiraError';
   }
 }
+
+const pathOf = (r: Route): string => (r as unknown as { value?: string }).value ?? String(r);
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
@@ -33,7 +47,7 @@ async function call(actor: Actor, path: Route, init: RequestInit = {}): Promise<
 
 export async function jiraGet<T>(actor: Actor, path: Route): Promise<T> {
   const res = await call(actor, path);
-  if (!res.ok) throw new JiraError(res.status, String(path), await res.text());
+  if (!res.ok) throw new JiraError(res.status, pathOf(path), await res.text());
   return (await res.json()) as T;
 }
 
@@ -41,7 +55,7 @@ export async function jiraGet<T>(actor: Actor, path: Route): Promise<T> {
 export async function jiraGetOptional<T>(actor: Actor, path: Route): Promise<T | undefined> {
   const res = await call(actor, path);
   if (res.status === 404) return undefined;
-  if (!res.ok) throw new JiraError(res.status, String(path), await res.text());
+  if (!res.ok) throw new JiraError(res.status, pathOf(path), await res.text());
   return (await res.json()) as T;
 }
 
@@ -52,7 +66,7 @@ export async function jiraSend<T = unknown>(
   body?: unknown
 ): Promise<T | undefined> {
   const res = await call(actor, path, { method, body: body === undefined ? undefined : JSON.stringify(body) });
-  if (!res.ok) throw new JiraError(res.status, String(path), await res.text());
+  if (!res.ok) throw new JiraError(res.status, pathOf(path), await res.text());
   if (res.status === 204) return undefined;
   const text = await res.text();
   return text ? (JSON.parse(text) as T) : undefined;

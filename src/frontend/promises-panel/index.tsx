@@ -64,7 +64,7 @@ function PromiseCard({
   return (
     <Card tone={danger ? 'danger' : undefined}>
       <Stack space="space.100">
-        <Inline spread="space-between" alignBlock="center">
+        <Inline spread="space-between" alignBlock="center" shouldWrap space="space.050">
           <Text weight="semibold">{p.customer}</Text>
           {closed ? <Lozenge appearance={p.state === 'kept' ? 'success' : 'neutral'}>{p.state === 'kept-late' ? 'Kept late' : p.state}</Lozenge> : <RiskLozenge risk={p.risk} />}
         </Inline>
@@ -107,7 +107,7 @@ function PromiseCard({
             {p.devIssueKey ? ` · depends on ${p.devIssueKey}` : ''}
           </Muted>
         </Inline>
-        <ButtonGroup label="Promise actions">
+        <Inline space="space.050" shouldWrap>
           <Button spacing="compact" appearance="subtle" onClick={() => setShowHistory(!showHistory)}>
             {showHistory ? 'Hide history' : 'History'}
           </Button>
@@ -116,7 +116,7 @@ function PromiseCard({
               Withdraw
             </Button>
           )}
-        </ButtonGroup>
+        </Inline>
         {showHistory && (
           <Stack space="space.050">
             {[...p.history].reverse().map((h, i) => (
@@ -153,14 +153,14 @@ function SuggestionCard({
         <Text>
           Track it as <Strong>{formatDateWithDay(p.promisedDate, today)}</Strong> for {p.customer}?
         </Text>
-        <ButtonGroup label="Suggestion actions">
+        <Inline space="space.100" shouldWrap>
           <Button appearance="primary" spacing="compact" onClick={() => onAccept(p.id)}>
             Track
           </Button>
           <Button appearance="subtle" spacing="compact" onClick={() => onDismiss(p.id)}>
             Dismiss
           </Button>
-        </ButtonGroup>
+        </Inline>
       </Stack>
     </Card>
   );
@@ -402,7 +402,7 @@ function App() {
         <SectionMessage appearance="error" title={worst.risk === 'broken' ? 'A promise to this customer was broken' : 'A promise to this customer is at risk'}>
           <Stack space="space.100">
             <Text>{worst.reasons[0]?.message}</Text>
-            <ButtonGroup label="At-risk actions">
+            <Inline space="space.100" shouldWrap>
               <Button appearance="primary" spacing="compact" onClick={() => setModal('draft')}>
                 Draft update
               </Button>
@@ -414,7 +414,7 @@ function App() {
                   Ask Rovo
                 </Button>
               )}
-            </ButtonGroup>
+            </Inline>
           </Stack>
         </SectionMessage>
       )}
@@ -442,7 +442,7 @@ function App() {
         <PromiseCard key={p.id} p={p} today={view.today} onWithdraw={(id) => act('dismissPromise', { id }, 'Promise withdrawn.')} />
       ))}
 
-      <ButtonGroup label="Promise actions">
+      <Inline space="space.100" shouldWrap>
         <Button appearance={open.length === 0 ? 'primary' : 'default'} onClick={() => setModal('track')}>
           Track a promise
         </Button>
@@ -452,7 +452,7 @@ function App() {
             Ask Rovo
           </Button>
         )}
-      </ButtonGroup>
+      </Inline>
 
       <Section title="Developer work">
         {view.devItems.length === 0 ? (
@@ -488,12 +488,14 @@ function App() {
         </Section>
       )}
 
-      <Inline spread="space-between" alignBlock="center">
-        <Muted>Checks every change to the linked work.</Muted>
-        <Button appearance="subtle" spacing="compact" onClick={() => act('recheck', {}, 'Re-checked against the latest plan.')}>
-          Re-check now
-        </Button>
-      </Inline>
+      <Stack space="space.050">
+        <Muted>Kept re-checks on every change to the linked work.</Muted>
+        <Inline>
+          <Button appearance="subtle" spacing="compact" onClick={() => act('recheck', {}, 'Re-checked against the latest plan.')}>
+            Re-check now
+          </Button>
+        </Inline>
+      </Stack>
 
       <ModalTransition>
         {modal === 'track' && (

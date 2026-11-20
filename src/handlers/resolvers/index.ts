@@ -14,7 +14,7 @@ import { evaluateRequest } from '../../services/evaluate';
 import { acceptSuggestion, closePromise, tellCustomer, trackPromise, UserError } from '../../services/promises';
 import { promisesForDevItem, promisesForRequest } from '../../store/promises';
 import { getSettings, saveSettings } from '../../store/settings';
-import { removeSample, sampleStatus, sampleStep, startSample } from '../../services/seed';
+import { removeSample, sampleStatusWithLeftovers, sampleStep, startSample } from '../../services/seed';
 import { portalForRequest } from '../../services/portal';
 
 type Ctx = {
@@ -156,7 +156,7 @@ define('spaces', async () => {
   };
 });
 define('boards', async (p) => scrumBoards(str(p.projectKey, 20) ?? '', 'user'));
-define('sampleStatus', async () => sampleStatus());
+define('sampleStatus', async () => sampleStatusWithLeftovers());
 define('sampleStep', async () => {
   await requireAdmin();
   return sampleStep();
@@ -169,9 +169,9 @@ define('startSample', async (p, ctx) => {
     accountId: ctx.accountId,
   });
 });
-define('removeSample', async () => {
+define('removeSample', async (p) => {
   await requireAdmin();
-  return removeSample();
+  return removeSample({ devKey: str(p.devKey, 20) });
 });
 
 export const handler = resolver.getDefinitions();

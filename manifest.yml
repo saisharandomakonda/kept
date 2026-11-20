@@ -7,7 +7,7 @@ modules:
         function: resolver
       render: native
       title: Customer promises
-      label: Customer promises
+      label: Kept
       dynamicProperties:
         function: request-badge
       displayConditions:
@@ -18,7 +18,7 @@ modules:
         function: resolver
       render: native
       title: Customers waiting
-      label: Customers waiting
+      label: Kept
       dynamicProperties:
         function: dev-badge
       displayConditions:
@@ -362,4 +362,6 @@ permissions:
     - write:sprint:jira-software
     - delete:sprint:jira-software
     - read:board-scope:jira-software
+    - write:board-scope:jira-software
+    - read:project:jira
     - storage:app

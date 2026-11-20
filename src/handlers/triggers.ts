@@ -6,6 +6,7 @@ import { jiraGetOptional } from '../jira/http';
 import { searchIssues } from '../jira/issues';
 import { sprintNames } from '../jira/projects';
 import { discoverFieldIds } from '../jira/fields';
+import { displayName } from '../jira/users';
 import { evaluateDevItems, evaluateRequest, sweepAll, refreshProperties } from '../services/evaluate';
 import { detectInReply } from '../services/promises';
 import { deletePromise, promisesForDevItem, promisesForRequest } from '../store/promises';
@@ -19,9 +20,9 @@ interface IssueEvent {
   associatedUsers?: { accountId: string; displayName?: string }[];
 }
 
-function actorName(event: IssueEvent): string | null {
+async function actorName(event: IssueEvent): Promise<string | null> {
   const u = event.associatedUsers?.find((x) => x.accountId === event.atlassianId) ?? event.associatedUsers?.[0];
-  return u?.displayName ?? null;
+  return u?.displayName ?? (await displayName(event.atlassianId ?? u?.accountId));
 }
 
 export async function onIssueEvent(event: IssueEvent): Promise<void> {
@@ -50,9 +51,8 @@ export async function onIssueEvent(event: IssueEvent): Promise<void> {
     const sprintIds = changes.filter((c) => c.field === 'sprint').flatMap((c) => [...addedSprintIds(c), ...removedSprintIds(c)]);
     const names = sprintIds.length > 0 ? await sprintNames(sprintIds) : {};
     const at = new Date().toISOString();
-    const evidence: ChangeEvidence[] = changes
-      .filter((c) => c.field !== 'assignee')
-      .map((c) => toEvidence(c, actorName(event), at, names));
+    const who = await actorName(event);
+    const evidence: ChangeEvidence[] = changes.filter((c) => c.field !== 'assignee').map((c) => toEvidence(c, who, at, names));
     await evaluateDevItems([key], { [key]: evidence });
   } catch (e) {
     console.error(`Kept: issue event ${event.eventType} failed: ${(e as Error).message}`);

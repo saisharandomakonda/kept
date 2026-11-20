@@ -11,13 +11,14 @@ import type { PromiseRecord } from '../domain/types';
 import { addCustomerReply } from '../jira/comments';
 import { jiraGet, jiraSend } from '../jira/http';
 import { createRelease, createSprint, scrumBoards, updateSprint, moveToSprint } from '../jira/projects';
+import { searchIssues } from '../jira/issues';
 import { deletePromise, promisesForRequest } from '../store/promises';
 import { today } from './clock';
-import { refreshProperties } from './evaluate';
 import { trackPromise, UserError } from './promises';
 
 const STATUS_KEY = 'sample:status:v1';
 export const SAMPLE_LABEL = 'kept-sample';
+const SAMPLE_RELEASE_NOTE = 'Created by Kept sample scenario';
 
 export interface SampleStatus {
   state: 'idle' | 'running' | 'done' | 'failed' | 'removing';
@@ -36,6 +37,8 @@ interface SamplePlan {
   day: string;
   serviceDeskId: string;
   requestTypeId: string;
+  /** Whether the chosen request type has a description field. */
+  hasDescription: boolean;
   devProjectId: string;
   devIssueTypeId: string;
   boardId?: number;
@@ -136,6 +139,9 @@ export async function startSample(input: { serviceKey: string; devKey: string; a
   if (current.state === 'done' && current.created.issues.length > 0) {
     throw new UserError('A sample scenario already exists. Remove it first.');
   }
+  if ((await labelledSampleItems()).length > 0) {
+    throw new UserError('Sample items from an earlier run still exist. Remove them first.');
+  }
   if (!input.serviceKey || !input.devKey) throw new UserError('Pick a service space and a software space.');
   return save({
     ...empty(),
@@ -162,7 +168,8 @@ export async function sampleStep(): Promise<SampleStatus> {
     }
   } catch (e) {
     s.state = 'failed';
-    s.error = e instanceof UserError ? e.message : `${STEPS[s.step]} failed: ${(e as Error).message.slice(0, 300)}`;
+    const msg = (e as Error).message.replace(/^Jira \d+ on \S+: /, '');
+    s.error = e instanceof UserError ? e.message : `${STEPS[s.step]} failed: ${msg.slice(0, 300)}`;
     console.error(`Kept sample step ${s.step} failed: ${(e as Error).stack ?? e}`);
   }
   return save(s);
@@ -182,16 +189,24 @@ async function prepare(s: SampleStatus) {
     route`/rest/servicedeskapi/servicedesk/${desk.id}/requesttype?limit=100`
   );
   let requestTypeId: string | undefined;
+  let hasDescription = false;
   const preferred = [...types.values].sort((a, b) => score(b.name) - score(a.name));
   for (const t of preferred) {
     const fields = await jiraGet<{ requestTypeFields: { fieldId: string; required: boolean }[] }>(
       'user',
       route`/rest/servicedeskapi/servicedesk/${desk.id}/requesttype/${t.id}/field`
     );
-    if (fields.requestTypeFields.filter((f) => f.required).every((f) => f.fieldId === 'summary' || f.fieldId === 'description')) {
+    const ids = fields.requestTypeFields.map((f) => f.fieldId);
+    const usable =
+      ids.includes('summary') &&
+      fields.requestTypeFields.filter((f) => f.required).every((f) => f.fieldId === 'summary' || f.fieldId === 'description');
+    if (!usable) continue;
+    // Prefer a type with a description field, but accept summary-only types.
+    if (!requestTypeId || (!hasDescription && ids.includes('description'))) {
       requestTypeId = t.id;
-      break;
+      hasDescription = ids.includes('description');
     }
+    if (hasDescription) break;
   }
   if (!requestTypeId) throw new UserError(`No request type in ${s.serviceKey} can be created with just a summary and description.`);
 
@@ -205,7 +220,10 @@ async function prepare(s: SampleStatus) {
     project.issueTypes.find((t) => !t.subtask);
   if (!issueType) throw new UserError(`${devKey} has no usable work type.`);
 
-  const boards = await scrumBoards(devKey, 'user').catch(() => []);
+  const boards = await scrumBoards(devKey, 'user').catch((e: Error) => {
+    console.warn(`Kept sample: could not read boards for ${devKey}: ${e.message}`);
+    return [];
+  });
   const versions = await jiraGet<{ name: string }[]>('user', route`/rest/api/3/project/${devKey}/versions`);
   const taken = new Set(versions.map((v) => v.name));
   const free = (name: string) => (taken.has(name) ? `${name} (sample)` : name);
@@ -214,6 +232,7 @@ async function prepare(s: SampleStatus) {
     day: today(),
     serviceDeskId: desk.id,
     requestTypeId,
+    hasDescription,
     devProjectId: project.id,
     devIssueTypeId: issueType.id,
     boardId: boards[0]?.id,
@@ -293,8 +312,8 @@ async function devItems(s: SampleStatus) {
     const key = (created as { key: string }).key;
     s.created.issues.push(key);
     p.devs.push(key);
-    if (story.sprint === 'A' && p.sprintA) await moveToSprint(p.sprintA, [key]).catch(() => undefined);
-    if (story.sprint === 'B' && p.sprintB) await moveToSprint(p.sprintB, [key]).catch(() => undefined);
+    if (story.sprint === 'A' && p.sprintA) await moveToSprint(p.sprintA, [key]).catch((e: Error) => console.warn(`Kept sample: move to sprint failed: ${e.message}`));
+    if (story.sprint === 'B' && p.sprintB) await moveToSprint(p.sprintB, [key]).catch((e: Error) => console.warn(`Kept sample: move to sprint failed: ${e.message}`));
     if (!p.boardId && story.sprint) {
       // No sprints on this site: use a due date with the same meaning.
       const due = addDays(p.day, story.sprint === 'A' ? 9 : 23);
@@ -359,26 +378,80 @@ async function replies(s: SampleStatus) {
 
 const STEP_FNS: ((s: SampleStatus) => Promise<void>)[] = [prepare, releases, sprints, devItems, requests, links, promises, replies];
 
-/** Deletes exactly what the sample created: work items, sprints, releases and their promises. */
-export async function removeSample(): Promise<SampleStatus> {
+/** Tries as the app first (its role usually may delete), then as the signed-in admin. */
+async function removeOne(method: 'DELETE' | 'POST', path: ReturnType<typeof route>, body?: unknown): Promise<string | undefined> {
+  try {
+    await jiraSend('app', method, path, body);
+    return undefined;
+  } catch (first) {
+    try {
+      await jiraSend('user', method, path, body);
+      return undefined;
+    } catch {
+      return (first as Error).message.replace(/^Jira \d+ on \S+: /, '').slice(0, 120);
+    }
+  }
+}
+
+/** Work items labelled kept-sample (also catches leftovers from an earlier, interrupted run). */
+async function labelledSampleItems(): Promise<string[]> {
+  const issues = await searchIssues(`labels = "${SAMPLE_LABEL}" ORDER BY created DESC`, ['summary'], 100).catch(() => []);
+  return issues.map((i) => i.key);
+}
+
+/** Releases the sample created in a software space (marked in their description). */
+async function sampleReleases(devKey: string | undefined): Promise<string[]> {
+  if (!devKey) return [];
+  const versions = await jiraGet<{ id: string; description?: string }[]>('app', route`/rest/api/3/project/${devKey}/versions`).catch(() => []);
+  return versions.filter((v) => v.description === SAMPLE_RELEASE_NOTE).map((v) => v.id);
+}
+
+/**
+ * Deletes what the sample created: its work items (anything labelled kept-sample), its sprints and
+ * releases, and their promises. Anything that can't be deleted is kept on record and reported.
+ */
+export async function removeSample(hint: { devKey?: string } = {}): Promise<SampleStatus> {
   const s = await sampleStatus();
   if (s.state === 'running') throw new UserError('The sample scenario is still being created. Wait for it to finish.');
+  const devKey = s.devKey ?? hint.devKey;
+  const issues = [...new Set([...s.created.issues, ...(await labelledSampleItems())])];
+  const versions = [...new Set([...s.created.versions, ...(await sampleReleases(devKey))])];
+  const failed: SampleStatus['created'] = { issues: [], sprints: [], versions: [] };
   const problems: string[] = [];
-  for (const key of s.created.issues) {
+
+  for (const key of issues) {
     for (const pr of await promisesForRequest(key).catch(() => [] as PromiseRecord[])) await deletePromise(pr.id);
   }
-  for (const key of [...s.created.issues].reverse()) {
-    await jiraSend('user', 'DELETE', route`/rest/api/3/issue/${key}?deleteSubtasks=true`).catch((e) => problems.push(`${key}: ${(e as Error).message.slice(0, 80)}`));
+  for (const key of [...issues].reverse()) {
+    const err = await removeOne('DELETE', route`/rest/api/3/issue/${key}?deleteSubtasks=true`);
+    if (err) {
+      failed.issues.push(key);
+      problems.push(`${key}: ${err}`);
+    }
   }
   for (const id of s.created.sprints) {
-    await jiraSend('user', 'POST', route`/rest/agile/1.0/sprint/${String(id)}`, { state: 'closed' }).catch(() => undefined);
-    await jiraSend('user', 'DELETE', route`/rest/agile/1.0/sprint/${String(id)}`).catch(() => undefined);
+    await removeOne('POST', route`/rest/agile/1.0/sprint/${String(id)}`, { state: 'closed' });
+    const err = await removeOne('DELETE', route`/rest/agile/1.0/sprint/${String(id)}`);
+    if (err) failed.sprints.push(id);
   }
-  for (const id of s.created.versions) {
-    await jiraSend('user', 'DELETE', route`/rest/api/3/version/${id}`).catch((e) => problems.push(`release ${id}: ${(e as Error).message.slice(0, 80)}`));
+  for (const id of versions) {
+    const err = await removeOne('DELETE', route`/rest/api/3/version/${id}`);
+    if (err) {
+      failed.versions.push(id);
+      problems.push(`release ${id}: ${err}`);
+    }
   }
-  await refreshProperties([], []);
   const next = empty();
-  if (problems.length) next.error = `Some items could not be removed: ${problems.slice(0, 3).join('; ')}`;
+  next.devKey = devKey;
+  next.created = failed;
+  if (problems.length) next.error = `Some sample items could not be removed (${problems.length}). First: ${problems[0]}`;
   return save(next);
+}
+
+/** Status plus a count of sample items left over from an earlier run. */
+export async function sampleStatusWithLeftovers(): Promise<SampleStatus & { leftovers: number }> {
+  const s = await sampleStatus();
+  if (s.state !== 'idle') return { ...s, leftovers: 0 };
+  const leftovers = (await labelledSampleItems()).length + s.created.versions.length;
+  return { ...s, leftovers };
 }

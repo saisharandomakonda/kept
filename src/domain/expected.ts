@@ -64,7 +64,7 @@ export function expectedDelivery(dev: DevSnapshot, today: IsoDate): Expected {
       notes.push({
         code: 'sprint-after-release',
         severity: 'warning',
-        message: `${dev.key} is in ${sprint.name}, which ends ${formatDate(sprint.endDate, today)}, after release ${release.name} (${formatDate(release.releaseDate, today)}). The fix may miss that release.`,
+        message: `${sprint.name} ends ${formatDate(sprint.endDate, today)}, after release ${release.name} (${formatDate(release.releaseDate, today)}), so the fix may miss that release.`,
       });
       // The work can't ship before it's built: use the later of the two.
       return { delivered: false, date: atLeastToday(sprint.endDate, today), source: 'sprint', notes };

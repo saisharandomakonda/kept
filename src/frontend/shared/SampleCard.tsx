@@ -24,6 +24,7 @@ import { call } from './api';
 import { Card, Loading, Muted } from './ui';
 
 type Spaces = { service: SpaceInfo[]; software: SpaceInfo[] };
+type Status = SampleStatus & { leftovers?: number };
 type Option = { label: string; value: string };
 
 const toOption = (s: SpaceInfo): Option => ({ label: `${s.name} (${s.key})`, value: s.key });
@@ -37,7 +38,7 @@ function pickDefault(list: SpaceInfo[], patterns: RegExp[]): SpaceInfo | undefin
 }
 
 export function SampleCard({ onChange }: { onChange?: () => void }) {
-  const [status, setStatus] = useState<SampleStatus>();
+  const [status, setStatus] = useState<Status>();
   const [spaces, setSpaces] = useState<Spaces>();
   const [service, setService] = useState<string>();
   const [dev, setDev] = useState<string>();
@@ -47,7 +48,7 @@ export function SampleCard({ onChange }: { onChange?: () => void }) {
 
   const load = useCallback(async () => {
     try {
-      const [s, sp] = await Promise.all([call<SampleStatus>('sampleStatus'), call<Spaces>('spaces')]);
+      const [s, sp] = await Promise.all([call<Status>('sampleStatus'), call<Spaces>('spaces')]);
       setStatus(s);
       setSpaces(sp);
       setService((v) => v ?? pickDefault(sp.service, [/engineering support/i, /support/i, /service/i])?.key);
@@ -84,7 +85,8 @@ export function SampleCard({ onChange }: { onChange?: () => void }) {
     setBusy(true);
     setError(undefined);
     try {
-      setStatus(await call<SampleStatus>('removeSample'));
+      await call<SampleStatus>('removeSample', { devKey: dev });
+      await load();
       onChange?.();
     } catch (e) {
       setError((e as Error).message);
@@ -100,6 +102,16 @@ export function SampleCard({ onChange }: { onChange?: () => void }) {
     <Card>
       <Stack space="space.150">
         <Text weight="semibold">Sample scenario</Text>
+        {status.state === 'idle' && (status.leftovers ?? 0) > 0 && (
+          <SectionMessage appearance="warning" title="Sample items from an earlier run">
+            <Stack space="space.100">
+              <Text>{status.leftovers} sample items are still here. Remove them before loading the scenario again.</Text>
+              <Button onClick={remove} isDisabled={busy}>
+                {busy ? 'Removing…' : 'Remove leftovers'}
+              </Button>
+            </Stack>
+          </SectionMessage>
+        )}
         {status.state === 'idle' && (
           <Stack space="space.150">
             <Text>
@@ -127,7 +139,7 @@ export function SampleCard({ onChange }: { onChange?: () => void }) {
               </Stack>
             </Inline>
             <Muted>Tip: a software space with a Scrum board shows sprints in the story. Without one, Kept uses due dates.</Muted>
-            <Button appearance="primary" onClick={run} isDisabled={busy || !service || !dev}>
+            <Button appearance="primary" onClick={run} isDisabled={busy || !service || !dev || (status.leftovers ?? 0) > 0}>
               Load sample scenario
             </Button>
           </Stack>
