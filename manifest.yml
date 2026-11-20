@@ -1,0 +1,49 @@
+modules:
+  jira:issueContext:
+    - key: kept-promises-panel
+      resource: promises-panel
+      resolver:
+        function: resolver
+      render: native
+      title: Customer promises
+      label: Customer promises
+      displayConditions:
+        jiraExpression: 'issue.project.projectTypeKey == "service_desk"'
+    - key: kept-dev-panel
+      resource: dev-panel
+      resolver:
+        function: resolver
+      render: native
+      title: Customers waiting
+      label: Customers waiting
+      displayConditions:
+        jiraExpression: 'issue.project.projectTypeKey != "service_desk"'
+  jira:globalPage:
+    - key: kept-global-page
+      resource: dashboard
+      resolver:
+        function: resolver
+      render: native
+      title: Kept
+  function:
+    - key: resolver
+      handler: index.resolver
+resources:
+  - key: promises-panel
+    path: src/frontend/promises-panel/index.tsx
+  - key: dev-panel
+    path: src/frontend/dev-panel/index.tsx
+  - key: dashboard
+    path: src/frontend/dashboard/index.tsx
+app:
+  runtime:
+    name: nodejs24.x
+    memoryMB: 256
+    architecture: arm64
+  id: ari:cloud:ecosystem::app/00000000-0000-0000-0000-000000000000
+permissions:
+  scopes:
+    - read:jira-work
+    - write:jira-work
+    - read:jira-user
+    - storage:app
