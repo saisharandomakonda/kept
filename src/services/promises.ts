@@ -9,6 +9,7 @@ import type { PromiseRecord } from '../domain/types';
 import { addCustomerReply, getComment } from '../jira/comments';
 import { getRequest } from '../jira/issues';
 import { isServiceSpace } from '../jira/projects';
+import { isCustomerAccount } from '../jira/users';
 import { getPromise, promisesForRequest, savePromise } from '../store/promises';
 import { getSettings } from '../store/settings';
 import { devItemsOf } from './chain';
@@ -196,7 +197,8 @@ export async function detectInReply(issueKey: string, commentId: string): Promis
   if (!(await isServiceSpace(projectKey))) return [];
   const [comment, request] = await Promise.all([getComment(issueKey, commentId), getRequest(issueKey, 'app')]);
   if (!comment || !request || !comment.isPublic) return [];
-  if (comment.authorId && comment.authorId === request.reporterId) return []; // the customer talking
+  // Customers writing "can you fix it by Friday?" aren't promises: only agents make promises.
+  if (await isCustomerAccount(comment.authorId)) return [];
   if (/^Kept\b|Posted by Kept/i.test(comment.text)) return [];
 
   const found = detectCommitments(comment.text, comment.date);
@@ -226,5 +228,6 @@ export async function detectInReply(issueKey: string, commentId: string): Promis
     );
   }
   if (created.length > 0) await refreshProperties([issueKey], []);
+  console.log(`Kept detection on ${issueKey}: ${found.length} candidate(s), ${created.length} suggested`);
   return created;
 }

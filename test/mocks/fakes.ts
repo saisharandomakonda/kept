@@ -169,6 +169,10 @@ function handle(actor: string, method: string, url: string, body?: Json) {
     ]);
   }
   if (p === '/rest/api/3/serverInfo') return res(200, { baseUrl: 'https://test.atlassian.net' });
+  if (p === '/rest/api/3/user') {
+    const id = params.get('accountId') ?? '';
+    return res(200, { accountId: id, displayName: id, accountType: id.startsWith('cust') ? 'customer' : 'atlassian' });
+  }
   if (p === '/rest/api/3/search/jql' && method === 'POST') {
     const keys = [...String(body?.jql ?? '').matchAll(/"([A-Z]+-\d+)"/g)].map((x) => x[1] as string);
     const issues = keys

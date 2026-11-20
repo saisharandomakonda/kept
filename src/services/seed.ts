@@ -14,7 +14,7 @@ import { createRelease, createSprint, scrumBoards, updateSprint, moveToSprint } 
 import { searchIssues } from '../jira/issues';
 import { deletePromise, promisesForRequest } from '../store/promises';
 import { today } from './clock';
-import { trackPromise, UserError } from './promises';
+import { detectInReply, trackPromise, UserError } from './promises';
 
 const STATUS_KEY = 'sample:status:v1';
 export const SAMPLE_LABEL = 'kept-sample';
@@ -372,7 +372,13 @@ async function replies(s: SampleStatus) {
   for (let i = 0; i < STORIES.length; i++) {
     const story = STORIES[i]!;
     const date = story.promiseOffset !== undefined ? addDays(p.day, story.promiseOffset) : p.day;
-    await addCustomerReply(p.requests[i] as string, `Hi,\n\n${story.reply(formatDateWithDay(date, p.day), p.v24Name)}\n\nThanks,\nSupport team`);
+    const pretty = formatDateWithDay(date, p.day);
+    const body = 'followUp' in story ? story.followUp(pretty) : story.reply(pretty, p.v24Name);
+    const key = p.requests[i] as string;
+    const commentId = await addCustomerReply(key, `Hi,\n\n${body}\n\nThanks,\nSupport team`);
+    // Forge doesn't send the app events for its own changes, so run detection here: exactly what
+    // happens when a real agent posts this reply.
+    if (!story.track && commentId) await detectInReply(key, commentId);
   }
 }
 
