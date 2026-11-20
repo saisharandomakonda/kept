@@ -20,19 +20,29 @@ npm run verify     # type check + lint + all tests
 
 | # | Case | Expected | Last result |
 |---|---|---|---|
-| E1 | Install | Kept in Apps menu, queue sidebar, request panel, dev panel | |
-| E2 | Load sample scenario | Progress bar, then 5 requests, 5 bugs, 2 sprints, 2 releases | |
-| E3 | Track a promise by hand | Risk + reasons shown | |
-| E4 | Move the dev item to a later sprint | Request at risk in < 60 s; 1 internal note; 1 dev heads-up; `keptRisk = "at-risk"` finds it | |
-| E5 | Move it back | On track again; no new note | |
-| E6 | Push the release date later | At risk via the release event | |
-| E7 | Resolve + release | Kept | |
-| E8 | Promise date in the past | Broken after the hourly sweep | |
-| E9 | Public reply with a date | Suggested promise; Track and Dismiss work | |
-| E10 | Draft update → send → re-promise | Public reply on the portal; old promise "replaced" | |
-| E11 | Portal as the customer | Stage tracker; no internal names in the response | |
-| E12 | Rovo: open from the panel | Agent answers with keys and reasons; track-promise asks to confirm | |
-| E13 | Promises page | Counts match JQL; tabs and chart work; dark mode looks right | |
-| E14 | Settings off/on | Notes, portal, detection respect the toggles | |
-| E15 | Remove sample data | Everything created is gone, nothing else touched | |
-| E16 | Unlink the dev item | Promise shows "No link" and stops alerting | |
+| E1 | Install | Kept in Apps menu, queue sidebar, request panel, dev panel | ✅ 2026-11-20: Apps menu page, request panel (live badge), dev panel (live badge). Queue sidebar page not checked yet |
+| E2 | Load sample scenario | Progress bar, then 5 requests, 5 bugs, 2 sprints, 2 releases | ✅ 2026-11-20 after 3 fixes (request type without description; cleanup permissions; board scope) |
+| E3 | Track a promise by hand | Risk + reasons shown | ⬜ manual Track modal not clicked yet (Track via suggestion ✅) |
+| E4 | Move the dev item to a later sprint | Request at risk in < 60 s; 1 internal note; 1 dev heads-up; `keptRisk = "at-risk"` finds it | ✅ 2026-11-20: at risk + internal note + dev heads-up + `keptRisk` JQL in ~10 s |
+| E5 | Move it back | On track again; no new note | ✅ 2026-11-20: back to On track, no extra notes |
+| E6 | Push the release date later | At risk via the release event | ✅ 2026-11-20 after 2 fixes (alert guard silenced 2nd slip; invalid KVS key) |
+| E7 | Resolve + release | Kept | ⬜ not run live (covered by unit tests) |
+| E8 | Promise date in the past | Broken after the hourly sweep | ⬜ not run live (covered by pipeline test) |
+| E9 | Public reply with a date | Suggested promise; Track and Dismiss work | ✅ 2026-11-20 after fix (reporter = agent in sample; now uses account type) |
+| E10 | Draft update → send → re-promise | Public reply on the portal; old promise "replaced" | ✅ 2026-11-20: draft, send, re-promise, old promise replaced |
+| E11 | Portal as the customer | Stage tracker; no internal names in the response | ⬜ not run yet |
+| E12 | Rovo: open from the panel | Agent answers with keys and reasons; track-promise asks to confirm | ⬜ not run yet (browser froze on the work item page) |
+| E13 | Promises page | Counts match JQL; tabs and chart work; dark mode looks right | 🟡 2026-11-20: page, tiles, tabs, chart render. Dark mode not checked |
+| E14 | Settings off/on | Notes, portal, detection respect the toggles | ⬜ not run yet |
+| E15 | Remove sample data | Everything created is gone, nothing else touched | ✅ 2026-11-20: removes exactly the sample items; leftovers banner works |
+| E16 | Unlink the dev item | Promise shows "No link" and stops alerting | ⬜ not run live (covered by pipeline test) |
+
+## Bugs found by live testing (2026-11-20), all fixed with a regression test or guard
+1. "Report a bug" request type has no description field → sample failed. Now only sends fields the type has.
+2. Site admins may lack "delete work items" in a space → cleanup failed. Now deletes as the app, sweeps leftovers by label, shows a "Remove leftovers" button.
+3. Board lookup needed `read:project:jira` → sample had no sprints. Scope added; errors now logged.
+4. Panel content overflowed Jira's narrow right column → buttons now wrap.
+5. Second slip within 10 minutes was not alerted (guard keyed on risk level). Now keyed on the exact transition. Test added.
+6. The new guard key used a character Forge storage rejects → alert silently skipped. Keys are sanitised; the fake storage now enforces Forge's key rules. Test added.
+7. Detection skipped replies by the reporter; in the sample the reporter is the agent. Now skips customer accounts (account type). Fake Jira returns account types.
+8. "Moved from Sprint 14 to Sprint 15" lacked the person's name when Jira omits it. Name is now looked up.
