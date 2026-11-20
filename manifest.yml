@@ -1,4 +1,5 @@
 modules:
+  # ---------- Screens ----------
   jira:issueContext:
     - key: kept-promises-panel
       resource: promises-panel
@@ -7,6 +8,8 @@ modules:
       render: native
       title: Customer promises
       label: Customer promises
+      dynamicProperties:
+        function: request-badge
       displayConditions:
         jiraExpression: 'issue.project.projectTypeKey == "service_desk"'
     - key: kept-dev-panel
@@ -16,6 +19,8 @@ modules:
       render: native
       title: Customers waiting
       label: Customers waiting
+      dynamicProperties:
+        function: dev-badge
       displayConditions:
         jiraExpression: 'issue.project.projectTypeKey != "service_desk"'
   jira:globalPage:
@@ -25,9 +30,117 @@ modules:
         function: resolver
       render: native
       title: Kept
+  jiraServiceManagement:queuePage:
+    - key: kept-queue-page
+      resource: dashboard
+      resolver:
+        function: resolver
+      render: native
+      title: Customer promises
+  jira:adminPage:
+    - key: kept-settings
+      resource: admin
+      resolver:
+        function: resolver
+      render: native
+      title: Kept
+  jiraServiceManagement:portalRequestDetail:
+    - key: kept-portal
+      resource: portal
+      resolver:
+        function: resolver
+      render: native
+      title: Fix progress
+      unlicensedAccess:
+        - customer
+        - unlicensed
+
+  # ---------- JQL: keptRisk, keptPromiseDate, keptWaiting, ... ----------
+  jira:entityProperty:
+    - key: kept-index
+      entityType: issue
+      propertyKey: kept
+      values:
+        - path: risk
+          type: string
+          searchAlias: keptRisk
+        - path: rank
+          type: number
+          searchAlias: keptRank
+        - path: promiseDate
+          type: date
+          searchAlias: keptPromiseDate
+        - path: promises
+          type: number
+          searchAlias: keptPromises
+        - path: waiting
+          type: number
+          searchAlias: keptWaiting
+        - path: earliestPromise
+          type: date
+          searchAlias: keptEarliestPromise
+        - path: atRisk
+          type: number
+          searchAlias: keptAtRisk
+
+  # ---------- Background ----------
+  trigger:
+    - key: kept-issue-events
+      function: on-issue-event
+      events:
+        - avi:jira:updated:issue
+        - avi:jira:commented:issue
+        - avi:jira:deleted:issue
+      filter:
+        ignoreSelf: true
+    - key: kept-link-events
+      function: on-link-event
+      events:
+        - avi:jira:created:issuelink
+        - avi:jira:deleted:issuelink
+    - key: kept-sprint-events
+      function: on-sprint-event
+      events:
+        - avi:jira-software:updated:sprint
+        - avi:jira-software:closed:sprint
+        - avi:jira-software:started:sprint
+    - key: kept-version-events
+      function: on-version-event
+      events:
+        - avi:jira:updated:version
+        - avi:jira:released:version
+        - avi:jira:unreleased:version
+    - key: kept-lifecycle
+      function: on-lifecycle
+      events:
+        - avi:forge:installed:app
+        - avi:forge:upgraded:app
+  scheduledTrigger:
+    - key: kept-hourly-sweep
+      function: on-schedule
+      interval: hour
+
   function:
     - key: resolver
       handler: index.resolver
+    - key: request-badge
+      handler: index.requestBadge
+    - key: dev-badge
+      handler: index.devBadge
+    - key: on-issue-event
+      handler: index.onIssueEvent
+    - key: on-link-event
+      handler: index.onLinkEvent
+    - key: on-sprint-event
+      handler: index.onSprintEvent
+    - key: on-version-event
+      handler: index.onVersionEvent
+    - key: on-schedule
+      handler: index.onSchedule
+      timeoutSeconds: 300
+    - key: on-lifecycle
+      handler: index.onLifecycle
+
 resources:
   - key: promises-panel
     path: src/frontend/promises-panel/index.tsx
@@ -35,15 +148,78 @@ resources:
     path: src/frontend/dev-panel/index.tsx
   - key: dashboard
     path: src/frontend/dashboard/index.tsx
+  - key: admin
+    path: src/frontend/admin/index.tsx
+  - key: portal
+    path: src/frontend/portal/index.tsx
+
 app:
   runtime:
     name: nodejs24.x
     memoryMB: 256
     architecture: arm64
-  id: ari:cloud:ecosystem::app/00000000-0000-0000-0000-000000000000
+  id: ari:cloud:ecosystem::app/11111111-1111-4111-8111-111111111111
+  storage:
+    entities:
+      - name: promise
+        attributes:
+          id: { type: string }
+          requestKey: { type: string }
+          requestId: { type: string }
+          projectKey: { type: string }
+          devIssueKey: { type: string }
+          customer: { type: string }
+          promisedDate: { type: string }
+          text: { type: string }
+          source: { type: string }
+          sourceCommentId: { type: string }
+          madeBy: { type: string }
+          madeAt: { type: string }
+          state: { type: string }
+          risk: { type: string }
+          riskRank: { type: integer }
+          expectedDate: { type: string }
+          expectedSource: { type: string }
+          reasons: { type: any }
+          lastAlertedRisk: { type: string }
+          customerToldAt: { type: string }
+          history: { type: any }
+          replacedBy: { type: string }
+          replaces: { type: string }
+          updatedAt: { type: string }
+        indexes:
+          - name: by-request
+            partition:
+              - requestKey
+            range:
+              - promisedDate
+          - name: by-dev
+            partition:
+              - devIssueKey
+            range:
+              - promisedDate
+          - name: by-state
+            partition:
+              - state
+            range:
+              - promisedDate
+          - name: by-project-state
+            partition:
+              - projectKey
+              - state
+            range:
+              - promisedDate
+
 permissions:
   scopes:
     - read:jira-work
     - write:jira-work
     - read:jira-user
+    - manage:jira-project
+    - read:servicedesk-request
+    - write:servicedesk-request
+    - read:sprint:jira-software
+    - write:sprint:jira-software
+    - delete:sprint:jira-software
+    - read:board-scope:jira-software
     - storage:app
