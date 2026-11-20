@@ -1,6 +1,7 @@
 // Jira product events → re-evaluate the promises they can affect.
 import { route } from '@forge/api';
 import { relevantChanges, addedSprintIds, removedSprintIds, toEvidence } from '../domain/changes';
+import { formatDate, isIsoDate } from '../domain/dates';
 import type { ChangeEvidence } from '../domain/evaluate';
 import { jiraGetOptional } from '../jira/http';
 import { searchIssues } from '../jira/issues';
@@ -128,7 +129,9 @@ export async function onVersionEvent(event: VersionEvent): Promise<void> {
       ? `Release ${name} was released`
       : event.eventType.includes(':unreleased:')
         ? `Release ${name} was marked unreleased`
-        : `Release ${name} changed${event.version.releaseDate ? ` (date: ${String(event.version.releaseDate).slice(0, 10)})` : ''}`;
+        : event.version.releaseDate && isIsoDate(String(event.version.releaseDate).slice(0, 10))
+          ? `Release ${name} is now planned for ${formatDate(String(event.version.releaseDate).slice(0, 10))}`
+          : `Release ${name} changed`;
     await reevaluateJql(`fixVersion = ${Number(id)}`, what);
   } catch (e) {
     console.error(`Kept: version event failed: ${(e as Error).message}`);

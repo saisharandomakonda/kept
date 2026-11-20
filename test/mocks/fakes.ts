@@ -70,11 +70,19 @@ class Query {
   }
 }
 
+// Same key rule as Forge KVS, so tests catch invalid keys.
+const VALID_KEY = /^(?!\s+$)[a-zA-Z0-9:._\s#-]+$/;
+function checkKey(key: string) {
+  if (!VALID_KEY.test(key) || key.length > 500) throw new Error(`INVALID_KEY: ${key}`);
+}
+
 export const kvsFake = {
   async get(key: string) {
+    checkKey(key);
     return structuredClone(store.kv.get(key));
   },
   async set(key: string, value: unknown, opts?: { keyPolicy?: string }) {
+    checkKey(key);
     if (opts?.keyPolicy === 'FAIL_IF_EXISTS' && store.kv.has(key)) throw new Error('KEY_ALREADY_EXISTS');
     store.kv.set(key, structuredClone(value));
   },

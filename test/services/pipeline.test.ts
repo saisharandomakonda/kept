@@ -117,6 +117,11 @@ describe('the slip (the demo moment)', () => {
     await evaluateDevItems(['BUG-1']);
     expect((await devView('BUG-1')).promises[0]?.risk).toBe('on-track');
     expect(jira.posted('comment', 'SUP-1')).toHaveLength(1);
+
+    // A new slip a few minutes later is a new event: it must alert again (found on the live site).
+    jira.issues.get('BUG-1')!.fields.fixVersions = [{ id: '24', name: 'v2.4', released: false, releaseDate: '2026-12-20' }];
+    await evaluateDevItems(['BUG-1']);
+    expect(jira.posted('comment', 'SUP-1')).toHaveLength(2);
   });
 
   it('respects the notification settings', async () => {

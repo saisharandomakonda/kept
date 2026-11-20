@@ -46,13 +46,16 @@ export async function evaluatePromises(
     }
     touchedRequests.add(p.requestKey);
     if (p.devIssueKey) touchedDevs.add(p.devIssueKey);
-    if (t.alert && !opts.quiet && (await claimOnce(`alerted:${p.id}:${t.next.risk}`))) {
+    if (t.alert && !opts.quiet && (await claimOnce(`alerted:${p.id}:${p.lastAlertedRisk ?? "none"}>${t.next.risk}:${p.history.length}:${p.updatedAt}`))) {
       alertsByRequest.set(p.requestKey, [...(alertsByRequest.get(p.requestKey) ?? []), t.next]);
       if (p.devIssueKey) alertsByDev.set(p.devIssueKey, [...(alertsByDev.get(p.devIssueKey) ?? []), t.next]);
     }
   }
 
   await refreshProperties([...touchedRequests], [...touchedDevs]);
+  console.log(
+    `Kept evaluated ${live.length} promise(s): ${result.changed.length} changed, alerts for ${[...alertsByRequest.keys()].join(',') || 'none'}`
+  );
 
   for (const [requestKey, list] of alertsByRequest) {
     if (!settings.noteOnRequest) break;
