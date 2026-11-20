@@ -378,7 +378,7 @@ async function replies(s: SampleStatus) {
     const commentId = await addCustomerReply(key, `Hi,\n\n${body}\n\nThanks,\nSupport team`);
     // Forge doesn't send the app events for its own changes, so run detection here: exactly what
     // happens when a real agent posts this reply.
-    if (!story.track && commentId) await detectInReply(key, commentId);
+    if (!story.track && commentId) await detectInReply(key, commentId, story.customer);
   }
 }
 

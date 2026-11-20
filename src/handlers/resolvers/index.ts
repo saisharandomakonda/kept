@@ -105,8 +105,10 @@ define('draftUpdate', async (p, ctx) => {
   const focus = [...open].sort((a, b) => b.riskRank - a.riskRank)[0];
   if (!focus) throw new UserError('Track a promise first, then Kept can draft the update.');
   const day = today();
+  // Re-promise with the same safety margin Kept uses for "on track", so the new promise starts healthy.
+  const margin = Math.max((await getSettings()).bufferDays, 1);
   const suggestedDate =
-    focus.expectedDate && focus.expectedDate > focus.promisedDate ? addDays(focus.expectedDate, 1) : undefined;
+    focus.expectedDate && focus.expectedDate > focus.promisedDate ? addDays(focus.expectedDate, margin) : undefined;
   const newDate = date(p.newDate) ?? (focus.risk === 'at-risk' || focus.risk === 'broken' ? suggestedDate : undefined);
   return {
     newDate,

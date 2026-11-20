@@ -190,7 +190,7 @@ export async function tellCustomer(input: UpdateInput): Promise<{ commentId?: st
 }
 
 /** Called for every new comment: suggests promises found in public replies by agents. */
-export async function detectInReply(issueKey: string, commentId: string): Promise<PromiseRecord[]> {
+export async function detectInReply(issueKey: string, commentId: string, customer?: string): Promise<PromiseRecord[]> {
   const settings = await getSettings();
   if (!settings.detectPromises) return [];
   const projectKey = issueKey.split('-')[0] ?? '';
@@ -222,6 +222,7 @@ export async function detectInReply(issueKey: string, commentId: string): Promis
         source: 'detected',
         sourceCommentId: commentId,
         accountId: comment.authorId,
+        customer,
         state: 'suggested',
         actor: 'app',
       })
