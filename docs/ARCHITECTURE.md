@@ -5,6 +5,7 @@
 - **Pure core, thin edges.** Every decision (expected delivery date, risk, promise detection, customer drafts, the portal view) is a pure TypeScript function in `src/domain/` with no Forge imports. That makes the rules easy to read and fully unit-tested.
 - **State-based, not event-based.** Events only decide *when* to re-check. Each check re-reads the current state of the chain (request → links → work item → sprint, release, due date) and recomputes. A missed event is caught by the hourly sweep, and running a check twice gives the same result.
 - **Explainable.** Every risk carries reasons with evidence: what changed, from what to what, who changed it, and when.
+- **Each person sees only their spaces.** Promises live in one store, so every read made for a person (Promises page, Rovo) is filtered to the spaces they can browse, and work items are opened as them.
 - **Customer-safe by construction.** The portal gets a separate, minimal projection, never the internal record. Anything addressed to the customer is posted as the agent, only after a person clicks Send.
 - **Quiet by default.** One internal note per worsening change. Recovery is silent. The guard is keyed on the exact transition, so a second slip still alerts.
 
@@ -31,7 +32,7 @@
 | `jiraServiceManagement:portalRequestDetail` | `kept-portal` | Customer portal: "Fix progress" (customers and unlicensed users) |
 | `jira:adminPage` | `kept-settings` | Jira settings → Apps → Kept |
 | `jira:entityProperty` | `kept-index` | JQL: `keptRisk`, `keptRank`, `keptPromiseDate`, `keptPromises`, `keptWaiting`, `keptEarliestPromise`, `keptAtRisk` |
-| `trigger` | issue, link, sprint, version, lifecycle | Re-check on change (`ignoreSelf: true`) |
+| `trigger` | issue, link, sprint, version, lifecycle | Re-check on change. The issue trigger uses `ignoreSelf`, so Kept's own notes don't wake it |
 | `scheduledTrigger` | `kept-hourly-sweep` | Hourly: dates that pass, missed events |
 | `rovo:agent` | `kept-agent` | Rovo chat, and "Ask Rovo" buttons (`rovo.open`) |
 | `action` ×5 | `get-promise-context`, `list-promises-at-risk`, `find-promises-in-request`, `track-promise`, `post-customer-update` | Used by the agent. The last two change data, so Rovo asks the user to confirm |
@@ -44,7 +45,7 @@
    - **Broken**: the promised date has passed and the fix hasn't reached the customer.
    - **At risk**: the plan lands after the promise; or there is no plan and the promise is within 14 days; or work hasn't started and the promise is within 3 days.
    - **Tight**: the plan lands less than the safety margin (2 days) before the promise, or the sprint may miss the release.
-   - **No plan yet**: no sprint, release or due date, but the promise is far away.
+   - **Not planned**: no sprint, release or due date, but the promise is far away.
    - **On track**: everything else.
    - **No link**: no developer work item is linked.
 3. All three numbers are settings. Each level has a fixed wording, tested in `test/domain/risk.test.ts`.
@@ -65,7 +66,7 @@
 
 ## Tests
 
-`npm run verify` runs type checking, ESLint and 121 Vitest tests:
+`npm run verify` runs type checking, ESLint and 125 Vitest tests:
 - domain tests for every rule and its wording;
 - end-to-end service tests against in-memory fakes of Jira REST and Forge KVS. The fake storage enforces Forge's real key rules.
 

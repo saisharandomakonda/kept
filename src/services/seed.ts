@@ -455,9 +455,11 @@ export async function removeSample(hint: { devKey?: string } = {}): Promise<Samp
 }
 
 /** Status plus a count of sample items left over from an earlier run. */
-export async function sampleStatusWithLeftovers(): Promise<SampleStatus & { leftovers: number }> {
+/** Status for the UI, with leftovers and the customer behind each sample request (same order as plan.requests). */
+export async function sampleStatusWithLeftovers(): Promise<SampleStatus & { leftovers: number; customers: string[] }> {
   const s = await sampleStatus();
-  if (s.state !== 'idle') return { ...s, leftovers: 0 };
+  const customers = STORIES.map((story) => story.customer);
+  if (s.state !== 'idle') return { ...s, leftovers: 0, customers };
   const leftovers = (await labelledSampleItems()).length + s.created.versions.length;
-  return { ...s, leftovers };
+  return { ...s, leftovers, customers };
 }

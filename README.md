@@ -14,7 +14,7 @@ A Forge app for Jira Service Management, Jira and Rovo. Built for Codegeist 2026
 
 A support agent tells a customer: "The fix ships in release 2.4, on Dec 10." The fix lives in a developer's work item in another space. A week later a developer moves that work item to the next sprint. Nobody tells support. The customer finds out on Dec 10, when nothing arrives.
 
-Jira has no idea a promise was made, so nothing can warn anyone. Customers have asked to see linked fix progress on the portal since 2017 ([JSDCLOUD-4636](https://jira.atlassian.com/browse/JSDCLOUD-4636), 850+ votes).
+Jira has no idea a promise was made, so nothing can warn anyone. Teams have also asked Atlassian since 2017 to show customers the linked engineering work on the portal ([JSDCLOUD-4636](https://jira.atlassian.com/browse/JSDCLOUD-4636), 859 votes). Kept's portal panel is a safe version of that.
 
 ## What Kept does
 
@@ -34,15 +34,19 @@ Risk is decided by **plain, explainable rules**, not AI: release date, else spri
 
 ## Try it (judges)
 
-**You need:** a Jira Cloud site with **Jira Service Management** (the Free plan works) and a **software space**. A Scrum space makes the sprint story richer; without one, Kept uses releases and due dates. **Rovo** is needed only for the agent (step 6). The Codegeist demo sites have all of this.
+**You need:** a Jira Cloud site with **Jira Service Management** (the Free plan works) and a **software space**. A Scrum space makes the sprint story richer; without one, Kept uses releases and due dates. **Rovo** is needed only for the agent (step 6). Our Codegeist demo site (`forge site provision`) had all of this.
 
 1. **Install** Kept with the install link above. Accept the permissions.
-2. Go to **Apps → Kept**. Under **Sample scenario**, pick a service space and a software space, then click **Load sample scenario** (about 30–60 seconds). It creates 5 customer requests and the developer work items behind them, 2 sprints, 2 releases, and promises in different states. Everything is labelled `kept-sample`.
-3. The Promises page now shows the overview. Open the **Acme Corp** request ("Invoice export fails for our large accounts"). In the right column, **Customer promises** shows **On track** and the plan behind it.
-4. **The slip:** open the linked developer work item ("Invoice PDF export times out…") and move it to the **next sprint** (or push its release date later). Go back to the Acme request. Within about 10–30 seconds it shows **At risk**, with the reason and who made the change. There's an internal note on the request and a heads-up on the work item. Search `keptRisk = "at-risk"` to find it.
+2. Go to **Apps → Kept**. Under **Sample scenario**, pick a service space and a software space, then click **Load sample scenario** (about 30–60 seconds). It creates 5 customer requests and the developer work items behind them, sprints **Sprint 14** and **Sprint 15** (if the space has a Scrum board), releases **v2.3** and **v2.4**, and promises in different states. Everything is labelled `kept-sample`.
+3. The sample card now links each request by customer. Open **Acme Corp** ("Invoice export fails for our large accounts"). In the right column, **Customer promises** shows **On track**, and the plan behind it.
+4. **The slip:** in the right column, under **Developer work**, open the linked work item ("Invoice PDF export times out…").
+   - With a Scrum board: change its **Sprint** field from Sprint 14 to **Sprint 15**.
+   - Without one: open **Releases** in the software space, edit **v2.4**, and move its release date a few weeks later.
+
+   Go back to the Acme request and refresh. Within about 10–30 seconds it shows **At risk**, with the reason and, for a sprint move, who made it. There's an internal note on the request and a heads-up on the work item. Search `keptRisk = "at-risk"` to find it.
 5. On the Acme request, click **Draft update**, pick a new date, and send. The customer gets a public reply. The new date is tracked, and the old promise shows as replaced.
 6. Click **Ask Rovo** on the Promises page, or chat with the **Kept** agent in Rovo.
-7. Optional: open the request on the **customer portal** to see **Fix progress**. Open **Jira settings → Apps → Kept** for settings. **Remove sample data** (on the Promises page) deletes everything the sample created.
+7. Optional: on the request, click **View request in portal** (under the description) to see **Fix progress** as the customer sees it. Open **Jira settings → Apps → Kept** for settings. **Remove sample data** (on the Promises page) deletes everything the sample created.
 
 The other sample stories show the other states: **Globex** is tight (the sprint ends 1 day before the promise), **Initech** is at risk (the fix has no plan at all), **Umbrella** was delivered, and **Hooli** has a promise Kept spotted in a reply, waiting for you to **Track** or **Dismiss** it.
 
@@ -76,7 +80,7 @@ flowchart LR
 - **Forge modules:** `jira:issueContext` ×2 (with live status badges), `jira:globalPage`, `jiraServiceManagement:queuePage`, `jiraServiceManagement:portalRequestDetail`, `jira:adminPage`, `jira:entityProperty` (JQL), `trigger` ×5, `scheduledTrigger`, `rovo:agent`, `action` ×5.
 - **UI:** UI Kit (`@forge/react`) with Atlassian Design System components and design tokens only, so it matches Jira, including dark mode.
 - **Storage:** Forge KVS custom entities with indexes (by request, by developer item, by state).
-- **No external calls and no paid AI.** Rovo comes with the site. Kept is eligible for Atlassian's "Runs on Atlassian" program.
+- **No external calls and no paid AI.** Rovo comes with the site. The Forge CLI reports each deploy as eligible for Atlassian's "Runs on Atlassian" program.
 
 More detail: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) · [docs/DATA-AND-PRIVACY.md](docs/DATA-AND-PRIVACY.md) · [docs/TEST-PLAN.md](docs/TEST-PLAN.md)
 
@@ -92,7 +96,7 @@ Requires Node 24 and the Forge CLI (`npm i -g @forge/cli`).
 
 ```bash
 npm install
-npm run verify                  # type check + lint + 121 tests (domain rules and end-to-end services against in-memory fakes)
+npm run verify                  # type check + lint + 125 tests (domain rules and end-to-end services against in-memory fakes)
 forge register                  # once, if you forked this repo
 forge deploy -e development
 forge install --product jira    # pick your site

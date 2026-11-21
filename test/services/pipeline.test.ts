@@ -10,7 +10,7 @@ const { evaluateDevItems, evaluateRequest, sweepAll } = await import('../../src/
 const { requestView, devView, dashboard } = await import('../../src/services/chain');
 const { portalForRequest } = await import('../../src/services/portal');
 const { onIssueEvent } = await import('../../src/handlers/triggers');
-const { getPromiseContext, trackPromiseAction, listPromisesAtRisk } = await import('../../src/handlers/rovo');
+const { getPromiseContext, trackPromiseAction, listPromisesAtRisk, findPromisesInRequest, postCustomerUpdate } = await import('../../src/handlers/rovo');
 const { requestBadge } = await import('../../src/handlers/resolvers');
 const { saveSettings } = await import('../../src/store/settings');
 
@@ -235,15 +235,15 @@ describe('customer portal', () => {
     const v = await portalForRequest('SUP-1');
     expect(v).toEqual({ stageIndex: 2, stage: 'In development', message: 'A fix is being built.' });
     await saveSettings({ portalShowDate: true });
-    expect((await portalForRequest('SUP-1'))?.plannedDate).toBe('2026-12-10');
+    expect(await portalForRequest('SUP-1')).toMatchObject({ plannedDate: '2026-12-10' });
   });
 
   it('shows nothing to someone who cannot see the request, or when turned off', async () => {
     jira.hiddenFromUser.add('SUP-1');
-    expect(await portalForRequest('SUP-1')).toBeNull();
+    expect(await portalForRequest('SUP-1')).toEqual({ hidden: true });
     jira.hiddenFromUser.clear();
     await saveSettings({ portalEnabled: false });
-    expect(await portalForRequest('SUP-1')).toBeNull();
+    expect(await portalForRequest('SUP-1')).toEqual({ hidden: true });
   });
 });
 
@@ -278,5 +278,38 @@ describe('Rovo actions', () => {
     await trackPromise({ requestKey: 'SUP-1', promisedDate: '2026-12-05', source: 'manual' });
     const r = (await listPromisesAtRisk({ days: 7 })) as { promises: { status: string; request: string }[] };
     expect(r.promises[0]).toMatchObject({ request: 'SUP-1', status: 'At risk' });
+  });
+
+  it('only shows promises from spaces the person can browse', async () => {
+    await trackPromise({ requestKey: 'SUP-1', promisedDate: '2026-12-05', source: 'manual' });
+    jira.hiddenSpaces.add('SUP');
+    expect(((await listPromisesAtRisk({ days: 7 })) as { promises: unknown[] }).promises).toHaveLength(0);
+    const d = await dashboard();
+    expect(d.rows).toHaveLength(0);
+    expect(d.counts.open).toBe(0);
+  });
+
+  it("refuses developer work items the person can't see", async () => {
+    await trackPromise({ requestKey: 'SUP-1', promisedDate: '2026-12-12', source: 'manual' });
+    jira.hiddenFromUser.add('BUG-1');
+    expect(await getPromiseContext({ requestKey: 'BUG-1' })).toEqual({ error: expect.stringContaining("can't see it") });
+  });
+
+  it('finds promises in agent replies, even when the agent raised the request', async () => {
+    addIssue('SUP-3', { summary: 'Raised by an agent', status: status('new'), reporter: { displayName: 'Maya Chen', accountId: 'agent-1' } });
+    const text = (t: string) => ({ type: 'doc', content: [{ type: 'paragraph', content: [{ type: 'text', text: t }] }] });
+    jira.issues.get('SUP-3')!.comments.push(
+      { id: '90', author: { accountId: 'agent-1', displayName: 'Maya Chen' }, body: text('We expect the fix by Dec 15.'), created: '2026-12-01T09:00:00.000+0000', jsdPublic: true },
+      { id: '91', author: { accountId: 'cust-9', displayName: 'Sam Lee' }, body: text('Can you fix it by Dec 3?'), created: '2026-12-01T10:00:00.000+0000', jsdPublic: true }
+    );
+    const r = (await findPromisesInRequest({ requestKey: 'SUP-3' })) as { replies: { author: string; ruleBasedCandidates: { date: string }[] }[] };
+    expect(r.replies.map((x) => x.author)).toEqual(['Maya Chen']);
+    expect(r.replies[0]?.ruleBasedCandidates[0]?.date).toBe('2026-12-15');
+  });
+
+  it('refuses to send customer messages that mention internal details', async () => {
+    const r = await postCustomerUpdate({ requestKey: 'SUP-1', message: 'BUG-1 slipped to Sprint 15, sorry about that.' });
+    expect(r).toEqual({ error: expect.stringContaining('internal details') });
+    expect(jira.posted('comment')).toHaveLength(0);
   });
 });

@@ -29,6 +29,12 @@ Kept does **not** store request descriptions, comments, attachments, emails or c
 | A public reply to the customer | The service request | The customer, **only when an agent clicks Send**, posted as that agent |
 | Sample scenario items (labelled `kept-sample`) | Spaces chosen by an admin | Removed with **Remove sample data** |
 
+## Who sees what inside Jira
+
+- The **Promises page** and the **Rovo agent** show only promises from spaces the person can browse.
+- The **request panel** shows to people who can open that request.
+- The **developer panel** and the heads-up note tell people who can see a developer work item which customers are waiting on it, and their promised dates. This is on purpose: developers should know who their change affects. Turn off the heads-up in settings if you don't want that.
+
 ## What customers see on the portal
 
 Only a stage (Reported, Confirmed, In development, Fixed, Released) and one sentence, plus the planned date if an admin turns that on (it is off by default). No work item keys, sprint names, people or internal notes. Kept first checks, as the viewing customer, that they can see the request.

@@ -63,12 +63,12 @@ export function draftCustomerUpdate(input: DraftInput): string {
   lines.push(
     passed
       ? `I owe you an update on ${topic}. I told you we expected the fix by ${promised}, and we've missed that date. I'm sorry.`
-      : `I want to give you an honest update on ${topic}. I told you we expected the fix by ${promised}, and that date has moved.`
+      : `I want to give you an honest update on ${topic}. I told you we expected the fix by ${promised}, and I'm no longer confident we'll make that date.`
   );
   lines.push('');
   if (input.newDate) {
     lines.push(
-      `Our engineering team had to re-plan this work. The fix is now expected by ${formatDateWithDay(input.newDate, today)}.`,
+      `Our engineering team has re-planned this work. The fix is now expected by ${formatDateWithDay(input.newDate, today)}.`,
       "I know you may have been planning around the original date, and I'm sorry for the change."
     );
   } else {

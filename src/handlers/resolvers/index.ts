@@ -1,4 +1,5 @@
-// Backend for every UI Kit screen. Each call checks who is asking and what they may see.
+// Backend for every UI Kit screen. Reads are made as the signed-in person or filtered to what they
+// can see; changes that need an admin check for one.
 import Resolver from '@forge/resolver';
 import { route } from '@forge/api';
 import { addDays, isIsoDate } from '../../domain/dates';
@@ -7,6 +8,7 @@ import { RISK_STYLE } from '../../domain/labels';
 import { worstRisk } from '../../domain/risk';
 import type { RiskLevel } from '../../domain/types';
 import { jiraGet } from '../../jira/http';
+import { canSeeWorkItem } from '../../jira/permissions';
 import { listSpaces, scrumBoards } from '../../jira/projects';
 import { dashboard, devView, requestView } from '../../services/chain';
 import { today } from '../../services/clock';
@@ -115,7 +117,8 @@ define('draftUpdate', async (p, ctx) => {
     suggestedDate,
     risk: focus.risk,
     text: draftCustomerUpdate({
-      customerName: view.request.reporterName,
+      // Don't greet the agent as the customer: in the sample, and on internal desks, the reporter may be them.
+      customerName: view.request.reporterId === ctx.accountId || focus.source === 'sample' ? undefined : view.request.reporterName,
       topic: view.request.summary,
       risk: focus.risk,
       promisedDate: focus.promisedDate,
@@ -132,7 +135,11 @@ define('sendUpdate', async (p, ctx) =>
 );
 
 // ---------- Customers waiting panel (dev work items) ----------
-define('devView', async (_p, ctx) => devView(issueKey(ctx)));
+define('devView', async (_p, ctx) => {
+  const key = issueKey(ctx);
+  if (!(await canSeeWorkItem(key))) throw new UserError("You can't see this work item.");
+  return devView(key);
+});
 
 // ---------- Promises page (global page + JSM queue page) ----------
 define('dashboard', async (p, ctx) => dashboard(str(p.projectKey, 20) ?? ctx.extension?.project?.key));
@@ -184,7 +191,7 @@ export async function requestBadge(payload: { extension?: { issue?: { key?: stri
   const key = payload?.extension?.issue?.key;
   if (!key) return {};
   const promises = (await promisesForRequest(key)).filter((p) => p.state === 'open' || p.state === 'suggested');
-  if (promises.length === 0) return { status: { type: 'lozenge', value: { label: 'None', type: 'default' } } };
+  if (promises.length === 0) return {};
   const open = promises.filter((p) => p.state === 'open');
   if (open.length === 0) return { status: { type: 'lozenge', value: { label: 'Suggested', type: 'new' } } };
   const risk = worstRisk(open.map((p) => p.risk)) as RiskLevel;

@@ -7,6 +7,7 @@ import { RISK_RANK } from '../domain/risk';
 import { RISK_STYLE } from '../domain/labels';
 import type { DevSnapshot, PromiseRecord, RiskLevel } from '../domain/types';
 import { getDevSnapshots, getRequest, type RequestInfo } from '../jira/issues';
+import { browsableSpaces } from '../jira/permissions';
 import { isServiceSpace } from '../jira/projects';
 import { ALL_STATES, promisesByState, promisesForDevItem, promisesForRequest } from '../store/promises';
 import { getSettings } from '../store/settings';
@@ -70,6 +71,7 @@ export async function requestView(requestKey: string) {
       status: request.status,
       customer: customerFor(promises, request.customer),
       reporterName: request.reporterName,
+      reporterId: request.reporterId,
     },
     devItems: items,
     promises: sortPromises(promises),
@@ -107,6 +109,7 @@ export interface DashboardRow {
   daysLeft: number;
 }
 
+/** The promises overview, limited to the spaces the signed-in person can browse. */
 export async function dashboard(projectKey?: string) {
   const day = today();
   const [open, suggested, kept, keptLate] = await Promise.all([
@@ -115,7 +118,9 @@ export async function dashboard(projectKey?: string) {
     promisesByState('kept', addDays(day, -90)),
     promisesByState('kept-late', addDays(day, -90)),
   ]);
-  const inScope = (p: PromiseRecord) => !projectKey || p.projectKey === projectKey;
+  const all = [...open, ...suggested, ...kept, ...keptLate].filter((p) => !projectKey || p.projectKey === projectKey);
+  const visible = await browsableSpaces(all.map((p) => p.projectKey));
+  const inScope = (p: PromiseRecord) => (!projectKey || p.projectKey === projectKey) && visible.has(p.projectKey);
   const toRow = (p: PromiseRecord): DashboardRow => ({
     id: p.id,
     requestKey: p.requestKey,
@@ -154,7 +159,7 @@ export async function dashboard(projectKey?: string) {
       open: openRows.length,
       atRisk: openRows.filter((r) => r.risk === 'at-risk').length,
       broken: brokenOpen,
-      dueThisWeek: openRows.filter((r) => r.daysLeft >= 0 && r.daysLeft < 7).length,
+      dueThisWeek: openRows.filter((r) => r.daysLeft >= 0 && r.daysLeft <= 7).length,
       suggested: suggested.filter(inScope).length,
       keptRate: denominator > 0 ? Math.round((keptOnTime / denominator) * 100) : null,
       keptCount: keptOnTime,

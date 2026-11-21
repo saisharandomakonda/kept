@@ -14,7 +14,7 @@ export interface PortalView {
 
 const MESSAGES = [
   'We have your report.',
-  'Our engineers have confirmed the problem and planned a fix.',
+  'Our engineers have confirmed the problem.',
   'A fix is being built.',
   'The fix is done and waiting for the next release.',
   'The fix has been released.',

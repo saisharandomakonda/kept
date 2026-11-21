@@ -54,3 +54,14 @@ npm run verify     # type check + lint + all tests
 11. The date picker showed a confusing example date ("2/18/1993"). Now says "Select the date you gave".
 12. Titles were shown twice on the queue page and settings page. Removed the extra heading.
 13. On a site without a service space, the sample card was a dead end (empty lists, disabled button). It now explains what to add.
+
+## Fixed after judge review #1 (2026-11-21)
+- The Promises page and Rovo now show only promises from spaces the person can browse. Rovo checks that the person can open a developer work item before describing it. Tests added.
+- The customer draft no longer greets the agent as the customer (sample or self-raised requests).
+- Rovo "find promises in replies" skipped every reply written by the reporter. It now skips only customer accounts, like the comment trigger. Test added.
+- Rovo refuses to send customer messages containing internal details (work item keys, sprint, backlog). Test added.
+- Customer wording: drafts no longer claim "the date has moved" when there was never a plan; the portal no longer says "planned a fix" for unplanned work.
+- Portal: shows nothing when turned off or not allowed, says "No engineering work is linked" only when that's true, and shows a real error when it fails to load.
+- Promises page: "Due in 7 days" includes day 7 (same as Rovo); a "Spotted in replies" tile; the kept-rate hint never says "none closed" next to 0%; Status sorts by severity; queue page empty state points to Apps → Kept.
+- Request panel: readable labels for closed promises, Withdraw asks first, a new date no longer wipes the agent's edits, and no "None" badge on requests without promises.
+- Sample card links say which customer each request is for.

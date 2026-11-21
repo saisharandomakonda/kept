@@ -21,6 +21,7 @@ import ForgeReconciler, {
 } from '@forge/react';
 import { rovo } from '@forge/bridge';
 import { formatDate, relativeDays } from '../../domain/dates';
+import { RISK_RANK } from '../../domain/risk';
 import type { dashboard, DashboardRow } from '../../services/chain';
 import { AGENT, call } from '../shared/api';
 import { SampleCard } from '../shared/SampleCard';
@@ -78,7 +79,8 @@ function rows(list: DashboardRow[], today: string) {
         ),
       },
       { key: r.expectedDate ?? '', content: <Text>{r.expectedDate ? formatDate(r.expectedDate, today) : 'Not planned'}</Text> },
-      { key: String(r.risk), content: r.state === 'kept' || r.state === 'kept-late' ? <RiskLozenge risk="delivered" /> : <RiskLozenge risk={r.risk} /> },
+      // Sort by severity, not alphabetically.
+      { key: String(RISK_RANK[r.risk]).padStart(2, '0'), content: r.state === 'kept' || r.state === 'kept-late' ? <RiskLozenge risk="delivered" /> : <RiskLozenge risk={r.risk} /> },
       { key: r.why, content: <Text size="small">{r.why}</Text> },
       { key: r.customerToldAt ?? '', content: <Text size="small">{r.customerToldAt ? formatDate(r.customerToldAt.slice(0, 10), today) : '—'}</Text> },
     ],
@@ -157,7 +159,11 @@ function App() {
         <Stack space="space.200">
           <EmptyState
             header="No promises tracked yet"
-            description="When an agent tells a customer when a fix will land, Kept tracks it and warns the moment the developer plan slips. Load the sample scenario to see it in action."
+            description={
+              isQueuePage
+                ? 'When an agent tells a customer when a fix will land, Kept tracks it and warns the moment the developer plan slips. To try it, open Apps → Kept and load the sample scenario.'
+                : 'When an agent tells a customer when a fix will land, Kept tracks it and warns the moment the developer plan slips. Load the sample scenario below to see it in action.'
+            }
           />
           {!isQueuePage && <SampleCard onChange={() => void refresh()} />}
         </Stack>
@@ -171,8 +177,15 @@ function App() {
             <Tile
               label="Kept on time"
               value={data.counts.keptRate === null ? '—' : `${data.counts.keptRate}%`}
-              hint={data.counts.closedCount ? `${data.counts.keptCount} of the last ${data.counts.closedCount + data.counts.broken}` : 'No closed promises yet'}
+              hint={
+                data.counts.closedCount + data.counts.broken > 0
+                  ? `${data.counts.keptCount} of the last ${data.counts.closedCount + data.counts.broken}`
+                  : 'None closed yet'
+              }
             />
+            {data.counts.suggested > 0 && (
+              <Tile label="Spotted in replies" value={String(data.counts.suggested)} hint="Open the request to Track or Dismiss" />
+            )}
           </Inline>
 
           <Tabs id="kept-tabs">
@@ -215,7 +228,7 @@ function App() {
 
           <SectionMessage appearance="information" title="Build a queue for promises at risk">
             <Stack space="space.100">
-              <Text>Kept indexes every request, so you can use it in queues, filters and dashboards. For example:</Text>
+              <Text>Every request and work item with a promise gets searchable Kept fields, so you can use them in queues, filters and dashboards. For example:</Text>
               <Code>keptRisk = &quot;at-risk&quot; ORDER BY keptPromiseDate ASC</Code>
               <Text>Developers can sort their backlog by who is waiting: </Text>
               <Code>keptWaiting &gt; 0 ORDER BY keptEarliestPromise ASC</Code>

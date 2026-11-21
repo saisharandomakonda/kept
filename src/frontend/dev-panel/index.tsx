@@ -56,7 +56,7 @@ function App() {
       {view.atRisk > 0 && (
         <SectionMessage appearance="warning">
           <Text>
-            The current plan misses {view.atRisk === 1 ? 'a promise' : `${view.atRisk} promises`}. Support has been told on the request.
+            The current plan misses {view.atRisk === 1 ? 'a promise' : `${view.atRisk} promises`} made to customers. The requests below have the details.
           </Text>
         </SectionMessage>
       )}

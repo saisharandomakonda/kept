@@ -24,7 +24,7 @@ import { call } from './api';
 import { Card, Loading, Muted } from './ui';
 
 type Spaces = { service: SpaceInfo[]; software: SpaceInfo[] };
-type Status = SampleStatus & { leftovers?: number };
+type Status = SampleStatus & { leftovers?: number; customers?: string[] };
 type Option = { label: string; value: string };
 
 const toOption = (s: SpaceInfo): Option => ({ label: `${s.name} (${s.key})`, value: s.key });
@@ -154,7 +154,7 @@ export function SampleCard({ onChange }: { onChange?: () => void }) {
                 />
               </Stack>
             </Inline>
-            <Muted>Tip: a software space with a Scrum board shows sprints in the story. Without one, Kept uses due dates.</Muted>
+            <Muted>Tip: a software space with a Scrum board shows sprints in the story. Without one, Kept uses releases and due dates.</Muted>
             <Button appearance="primary" onClick={run} isDisabled={busy || !service || !dev || (status.leftovers ?? 0) > 0}>
               Load sample scenario
             </Button>
@@ -174,10 +174,10 @@ export function SampleCard({ onChange }: { onChange?: () => void }) {
                   Open a request to see its promises. Try it: move the Acme bug to the next sprint and watch its request turn
                   red.
                 </Text>
-                <Inline space="space.100" shouldWrap>
-                  {requests.map((k) => (
+                <Inline space="space.150" shouldWrap>
+                  {requests.map((k, i) => (
                     <Link key={k} href={`/browse/${k}`} openNewTab>
-                      {k}
+                      {status.customers?.[i] ? `${status.customers[i]} · ${k}` : k}
                     </Link>
                   ))}
                 </Inline>

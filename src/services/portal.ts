@@ -8,16 +8,19 @@ import { getSettings } from '../store/settings';
 import { devItemsOf } from './chain';
 import { today } from './clock';
 
-export async function portalForRequest(requestKey: string): Promise<PortalView | null> {
+/** Hidden: turned off, or the viewer can't see the request. Null: no engineering work is linked. */
+export type PortalResult = PortalView | { hidden: true } | null;
+
+export async function portalForRequest(requestKey: string): Promise<PortalResult> {
   const settings = await getSettings();
-  if (!settings.portalEnabled) return null;
+  if (!settings.portalEnabled) return { hidden: true };
   // Access check as the viewing customer: the JSM API only returns requests they may see.
   const visible = await jiraGetOptional<{ issueKey: string }>('user', route`/rest/servicedeskapi/request/${requestKey}`).catch(
     () => undefined
   );
-  if (!visible) return null;
+  if (!visible) return { hidden: true };
   const request = await getRequest(requestKey, 'app');
-  if (!request) return null;
+  if (!request) return { hidden: true };
   const { snapshots } = await devItemsOf(request);
   return portalView([...snapshots.values()], today(), settings.portalShowDate);
 }

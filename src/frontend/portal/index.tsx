@@ -6,17 +6,22 @@ import { PORTAL_STAGES, type PortalView } from '../../domain/portal';
 import { call } from '../shared/api';
 import { Muted } from '../shared/ui';
 
+type Result = PortalView | { hidden: true } | null;
+
 function App() {
-  const [view, setView] = useState<PortalView | null | undefined>(undefined);
+  const [view, setView] = useState<Result | undefined>(undefined);
+  const [failed, setFailed] = useState(false);
 
   useEffect(() => {
-    call<PortalView | null>('portalView')
+    call<Result>('portalView')
       .then(setView)
-      .catch(() => setView(null));
+      .catch(() => setFailed(true));
   }, []);
 
+  if (failed) return <Muted>Fix progress couldn&apos;t load. Refresh the page to try again.</Muted>;
   if (view === undefined) return <Muted>Loading fix progress…</Muted>;
-  if (view === null) return <Muted>No engineering fix is linked to this request yet.</Muted>;
+  if (view === null) return <Muted>No engineering work is linked to this request.</Muted>;
+  if ('hidden' in view) return null;
 
   const items = PORTAL_STAGES.map((label, i) => ({
     id: String(i),

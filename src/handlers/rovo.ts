@@ -1,14 +1,17 @@
-// Rovo actions for the Kept agent (and the MCP server, which exposes the same actions).
-// Inputs come from an LLM: everything is validated, and permissions come from the signed-in user.
+// Rovo actions for the Kept agent. Inputs come from an LLM, so everything is validated. Reads are made
+// as the signed-in person or filtered to the spaces they can browse.
 import { daysBetween, isIsoDate } from '../domain/dates';
 import { detectCommitments } from '../domain/detect';
 import { RISK_STYLE } from '../domain/labels';
 import type { PromiseRecord } from '../domain/types';
 import { listComments } from '../jira/comments';
 import { getRequest } from '../jira/issues';
+import { canSeeWorkItem } from '../jira/permissions';
 import { isServiceSpace } from '../jira/projects';
+import { isCustomerAccount } from '../jira/users';
 import { dashboard, devView, requestView } from '../services/chain';
 import { today } from '../services/clock';
+import { looksInternal } from '../domain/draft';
 import { tellCustomer, trackPromise, UserError } from '../services/promises';
 
 interface ActionPayload {
@@ -76,6 +79,7 @@ export async function getPromiseContext(payload: ActionPayload, _ctx?: ActionCon
     const day = today();
     if (!(await isServiceSpace(projectKey))) {
       // A developer work item: who is waiting on it?
+      if (!(await canSeeWorkItem(key))) throw new UserError(`Work item ${key} was not found, or you can't see it.`);
       const v = await devView(key);
       return {
         workItem: key,
@@ -127,9 +131,10 @@ export async function findPromisesInRequest(payload: ActionPayload) {
     const key = resolveKey(payload);
     const request = await getRequest(key, 'user');
     if (!request) throw new UserError(`Request ${key} was not found, or you can't see it.`);
-    const replies = (await listComments(key, 'user', 50))
-      .filter((c) => c.isPublic && c.authorId !== request.reporterId && !/Posted by Kept/.test(c.text))
-      .slice(0, 15);
+    // Only agents make promises: skip replies written by customers (portal-only accounts).
+    const comments = (await listComments(key, 'user', 50)).filter((c) => c.isPublic && !/Posted by Kept/.test(c.text));
+    const fromCustomer = await Promise.all(comments.map((c) => isCustomerAccount(c.authorId)));
+    const replies = comments.filter((_, i) => !fromCustomer[i]).slice(0, 15);
     const v = await requestView(key);
     const tracked = v.found ? v.promises.filter((p) => p.state === 'open' || p.state === 'suggested').map((p) => p.promisedDate) : [];
     return {
@@ -169,6 +174,9 @@ export async function postCustomerUpdate(payload: ActionPayload, ctx?: ActionCon
     const key = resolveKey(payload);
     const newDate = payload.newPromisedDate?.trim() || undefined;
     if (newDate && !isIsoDate(newDate)) throw new UserError('newPromisedDate must be a date in YYYY-MM-DD form.');
+    if (looksInternal(payload.message ?? '')) {
+      throw new UserError('The message mentions internal details (a work item key, sprint, backlog or Jira). Rewrite it for the customer, then try again.');
+    }
     const r = await tellCustomer({ requestKey: key, message: payload.message ?? '', newDate, accountId: accountOf(ctx) });
     return {
       sent: true,

@@ -18,7 +18,7 @@ describe('draftCustomerUpdate', () => {
     const text = draftCustomerUpdate({ ...base, risk: 'at-risk', newDate: '2026-12-17', customerName: 'Sam Lee', agentName: 'Maya Chen' });
     expect(text).toContain('Hi Sam,');
     expect(text).toContain('"Invoice export fails for large accounts"');
-    expect(text).toContain('by Thu, Dec 10, and that date has moved');
+    expect(text).toContain("by Thu, Dec 10, and I'm no longer confident we'll make that date");
     expect(text).toContain('now expected by Thu, Dec 17');
     expect(text.trim().endsWith('Maya')).toBe(true);
     expect(looksInternal(text)).toBe(false);

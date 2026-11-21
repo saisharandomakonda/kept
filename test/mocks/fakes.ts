@@ -122,12 +122,15 @@ export const jira = {
   calls: [] as { actor: string; method: string; path: string; body?: unknown }[],
   /** Requests the "user" is NOT allowed to see. */
   hiddenFromUser: new Set<string>(),
+  /** Spaces the "user" can't browse. */
+  hiddenSpaces: new Set<string>(),
   reset() {
     this.issues.clear();
     this.projects.clear();
     this.sprints.clear();
     this.calls = [];
     this.hiddenFromUser.clear();
+    this.hiddenSpaces.clear();
   },
   posted(kind: 'comment' | 'property', key?: string) {
     return this.calls.filter(
@@ -167,6 +170,12 @@ function handle(actor: string, method: string, url: string, body?: Json) {
       { id: 'customfield_10020', name: 'Sprint', schema: { custom: 'com.pyxis.greenhopper.jira:gh-sprint' } },
       { id: 'customfield_10002', name: 'Organizations', schema: { custom: 'com.atlassian.servicedesk:sd-customer-organizations' } },
     ]);
+  }
+  if (p === '/rest/api/3/mypermissions') {
+    const perm = params.get('permissions') ?? '';
+    const space = params.get('projectKey');
+    const has = !(actor === 'user' && space && jira.hiddenSpaces.has(space));
+    return res(200, { permissions: { [perm]: { havePermission: has } } });
   }
   if (p === '/rest/api/3/serverInfo') return res(200, { baseUrl: 'https://test.atlassian.net' });
   if (p === '/rest/api/3/user') {

@@ -39,6 +39,16 @@ import { Card, Loading, Muted, RiskLozenge, Section } from '../shared/ui';
 type View = Extract<Awaited<ReturnType<typeof requestView>>, { found: true }>;
 type Draft = { text: string; newDate?: string; suggestedDate?: string; risk: string };
 
+const STATE_LABEL: Record<PromiseRecord['state'], { label: string; appearance: 'success' | 'warning' | 'danger' | 'neutral' | 'discovery' }> = {
+  suggested: { label: 'Suggested', appearance: 'discovery' },
+  open: { label: 'Open', appearance: 'neutral' },
+  kept: { label: 'Kept', appearance: 'success' },
+  'kept-late': { label: 'Kept late', appearance: 'warning' },
+  broken: { label: 'Broken', appearance: 'danger' },
+  withdrawn: { label: 'Withdrawn', appearance: 'neutral' },
+  replaced: { label: 'Replaced', appearance: 'neutral' },
+};
+
 const SOURCE_LABEL: Record<PromiseRecord['source'], string> = {
   manual: 'Tracked by hand',
   detected: 'Spotted in a reply',
@@ -56,6 +66,7 @@ function PromiseCard({
   onWithdraw: (id: string) => void;
 }) {
   const [showHistory, setShowHistory] = useState(false);
+  const [confirming, setConfirming] = useState(false);
   const closed = p.state !== 'open';
   const left = daysBetween(today, p.promisedDate);
   const why = p.reasons.filter((r) => r.code !== 'recent-change');
@@ -66,7 +77,7 @@ function PromiseCard({
       <Stack space="space.100">
         <Inline spread="space-between" alignBlock="center" shouldWrap space="space.050">
           <Text weight="semibold">{p.customer}</Text>
-          {closed ? <Lozenge appearance={p.state === 'kept' ? 'success' : 'neutral'}>{p.state === 'kept-late' ? 'Kept late' : p.state}</Lozenge> : <RiskLozenge risk={p.risk} />}
+          {closed ? <Lozenge appearance={STATE_LABEL[p.state].appearance}>{STATE_LABEL[p.state].label}</Lozenge> : <RiskLozenge risk={p.risk} />}
         </Inline>
         <Text>
           Promised <Strong>{formatDateWithDay(p.promisedDate, today)}</Strong>
@@ -107,16 +118,30 @@ function PromiseCard({
             {p.devIssueKey ? ` · depends on ${p.devIssueKey}` : ''}
           </Muted>
         </Inline>
-        <Inline space="space.050" shouldWrap>
-          <Button spacing="compact" appearance="subtle" onClick={() => setShowHistory(!showHistory)}>
-            {showHistory ? 'Hide history' : 'History'}
-          </Button>
-          {!closed && (
-            <Button spacing="compact" appearance="subtle" onClick={() => onWithdraw(p.id)}>
-              Withdraw
+        {confirming ? (
+          <Stack space="space.050">
+            <Text size="small">Withdraw this promise? Kept stops following it. The customer isn&apos;t told.</Text>
+            <Inline space="space.050" shouldWrap>
+              <Button spacing="compact" appearance="warning" onClick={() => onWithdraw(p.id)}>
+                Withdraw
+              </Button>
+              <Button spacing="compact" appearance="subtle" onClick={() => setConfirming(false)}>
+                Keep it
+              </Button>
+            </Inline>
+          </Stack>
+        ) : (
+          <Inline space="space.050" shouldWrap>
+            <Button spacing="compact" appearance="subtle" onClick={() => setShowHistory(!showHistory)}>
+              {showHistory ? 'Hide history' : 'History'}
             </Button>
-          )}
-        </Inline>
+            {!closed && (
+              <Button spacing="compact" appearance="subtle" onClick={() => setConfirming(true)}>
+                Withdraw
+              </Button>
+            )}
+          </Inline>
+        )}
         {showHistory && (
           <Stack space="space.050">
             {[...p.history].reverse().map((h, i) => (
@@ -251,6 +276,8 @@ function DraftModal({ view, onClose, onDone }: { view: View; onClose: () => void
   const [busy, setBusy] = useState(false);
   // Bumped on every new draft so the (uncontrolled) message field shows the fresh text.
   const [draftNo, setDraftNo] = useState(0);
+  // Once the agent edits the message, a new date no longer overwrites their words.
+  const [edited, setEdited] = useState(false);
 
   const load = useCallback(async (date?: string) => {
     try {
@@ -258,6 +285,7 @@ function DraftModal({ view, onClose, onDone }: { view: View; onClose: () => void
       setDraft(d);
       setText(d.text);
       setDraftNo((n) => n + 1);
+      setEdited(false);
       setNewDate(d.newDate ?? '');
     } catch (e) {
       setError((e as Error).message);
@@ -303,11 +331,19 @@ function DraftModal({ view, onClose, onDone }: { view: View; onClose: () => void
                   placeholder="No new date"
                   onChange={(v: string) => {
                     setNewDate(v);
-                    void load(v);
+                    if (!edited) void load(v);
                   }}
                 />
                 {draft.suggestedDate && <Muted>Plan says {formatDateWithDay(draft.suggestedDate, view.today)} at the earliest</Muted>}
               </Inline>
+              {edited && newDate !== (draft.newDate ?? '') && (
+                <Inline space="space.100" alignBlock="center" shouldWrap>
+                  <Muted>You edited the message, so it still has the old wording.</Muted>
+                  <Button spacing="compact" onClick={() => void load(newDate || undefined)}>
+                    Rewrite for this date
+                  </Button>
+                </Inline>
+              )}
             </Stack>
             <Stack space="space.050">
               <Label labelFor="kept-message">Message to the customer</Label>
@@ -316,7 +352,10 @@ function DraftModal({ view, onClose, onDone }: { view: View; onClose: () => void
                 id="kept-message"
                 defaultValue={text}
                 minimumRows={10}
-                onChange={(e) => setText(String(e.target.value ?? ''))}
+                onChange={(e) => {
+                  setText(String(e.target.value ?? ''));
+                  setEdited(true);
+                }}
               />
             </Stack>
             {internal && (
