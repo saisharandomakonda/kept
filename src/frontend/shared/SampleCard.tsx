@@ -112,7 +112,23 @@ export function SampleCard({ onChange }: { onChange?: () => void }) {
             </Stack>
           </SectionMessage>
         )}
-        {status.state === 'idle' && (
+        {status.state === 'idle' && spaces.service.length === 0 && (
+          <SectionMessage appearance="information" title="Kept needs a service space">
+            <Text>
+              Kept follows promises made on Jira Service Management requests. Add Jira Service Management to this site (the Free
+              plan works) and create a service space, then come back here to load the sample.
+            </Text>
+          </SectionMessage>
+        )}
+        {status.state === 'idle' && spaces.service.length > 0 && spaces.software.length === 0 && (
+          <SectionMessage appearance="information" title="Kept needs a software space">
+            <Text>
+              The sample puts the developers&apos; work items in a software space. Create one (a Scrum space shows sprints best),
+              then come back here.
+            </Text>
+          </SectionMessage>
+        )}
+        {status.state === 'idle' && spaces.service.length > 0 && spaces.software.length > 0 && (
           <Stack space="space.150">
             <Text>
               Creates 5 customer requests, the developer work items they depend on, 2 sprints and 2 releases, with promises in
