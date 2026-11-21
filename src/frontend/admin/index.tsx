@@ -2,7 +2,6 @@
 import React, { useEffect, useState } from 'react';
 import ForgeReconciler, {
   Button,
-  Heading,
   Inline,
   Label,
   SectionMessage,
@@ -29,6 +28,13 @@ function App() {
   const [error, setError] = useState<string>();
   const [saved, setSaved] = useState(false);
   const [busy, setBusy] = useState(false);
+  // Bumped after each save so the (uncontrolled) number fields show the stored values.
+  const [loadNo, setLoadNo] = useState(0);
+
+  const change = (patch: Partial<Settings>) => {
+    setSaved(false);
+    setSettings((s) => (s ? { ...s, ...patch } : s));
+  };
 
   useEffect(() => {
     call<Settings>('getSettings').then(setSettings).catch((e: Error) => setError(e.message));
@@ -41,6 +47,7 @@ function App() {
     setError(undefined);
     try {
       setSettings(await call<Settings>('saveSettings', settings as unknown as Record<string, unknown>));
+      setLoadNo((n) => n + 1);
       setSaved(true);
     } catch (e) {
       setError((e as Error).message);
@@ -54,12 +61,14 @@ function App() {
   const num = (key: 'bufferDays' | 'unplannedWarnDays' | 'notStartedWarnDays', label: string, help: string) => (
     <Stack space="space.050">
       <Label labelFor={`kept-${key}`}>{label}</Label>
+      {/* Uncontrolled: a controlled value drops fast typing in UI Kit. */}
       <Textfield
+        key={`kept-${key}-${loadNo}`}
         id={`kept-${key}`}
         type="number"
         width={120}
-        value={String(settings[key])}
-        onChange={(e) => setSettings({ ...settings, [key]: Number(e.target.value) })}
+        defaultValue={String(settings[key])}
+        onChange={(e) => change({ [key]: Number(e.target.value) })}
       />
       <Muted>{help}</Muted>
     </Stack>
@@ -67,10 +76,9 @@ function App() {
 
   return (
     <Stack space="space.300">
-      <Stack space="space.050">
-        <Heading size="large">Kept settings</Heading>
-        <Text color="color.text.subtle">Tracks promises support makes to customers about fixes, and warns when the developer plan slips.</Text>
-      </Stack>
+      <Text color="color.text.subtle">
+        Kept tracks the dates support gives customers about fixes, and warns when the developer plan slips. These settings apply to the whole site.
+      </Text>
 
       <Card>
         <Stack space="space.200">
@@ -80,7 +88,7 @@ function App() {
               <Toggle
                 id={`kept-${t.key}`}
                 isChecked={settings[t.key] as boolean}
-                onChange={() => setSettings({ ...settings, [t.key]: !settings[t.key] })}
+                onChange={() => change({ [t.key]: !settings[t.key] })}
                 label={t.label}
               />
               <Stack space="space.0">

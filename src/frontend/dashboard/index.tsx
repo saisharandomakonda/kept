@@ -44,13 +44,14 @@ function Tile({ label, value, hint }: { label: string; value: string; hint?: str
 
 const head = {
   cells: [
-    { key: 'customer', content: 'Customer', isSortable: true },
-    { key: 'request', content: 'Request' },
-    { key: 'promised', content: 'Promised', isSortable: true },
-    { key: 'expected', content: 'Fix expected' },
-    { key: 'risk', content: 'Status', isSortable: true },
-    { key: 'why', content: 'Why' },
-    { key: 'told', content: 'Customer told' },
+    // Widths are percentages; keys like ENGS-123 must not wrap.
+    { key: 'customer', content: 'Customer', isSortable: true, width: 12 },
+    { key: 'request', content: 'Request', width: 10 },
+    { key: 'promised', content: 'Promised', isSortable: true, width: 10 },
+    { key: 'expected', content: 'Fix expected', width: 10 },
+    { key: 'risk', content: 'Status', isSortable: true, width: 9 },
+    { key: 'why', content: 'Why', width: 39 },
+    { key: 'told', content: 'Customer told', width: 10 },
   ],
 };
 
@@ -125,7 +126,8 @@ function App() {
     <Stack space="space.300">
       <Inline spread="space-between" alignBlock="center">
         <Stack space="space.050">
-          <Heading size="large">Customer promises</Heading>
+          {/* The queue page already has "Customer promises" as its title. */}
+          {!isQueuePage && <Heading size="large">Customer promises</Heading>}
           <Text color="color.text.subtle">
             Every fix date support gave a customer, checked against the live developer plan{isQueuePage && projectKey ? ` for ${projectKey}` : ''}.
           </Text>

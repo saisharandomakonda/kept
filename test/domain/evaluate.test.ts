@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { applyAssessment, devSummary, requestSummary } from '../../src/domain/evaluate';
+import { applyAssessment, customerFor, devSummary, requestSummary } from '../../src/domain/evaluate';
 import { DEFAULT_SETTINGS, type PromiseRecord } from '../../src/domain/types';
 import { TODAY, dev, sprint, version } from '../fixtures/dev';
 
@@ -121,5 +121,18 @@ describe('summaries for JQL', () => {
 
   it('summarises a dev item by distinct requests waiting', () => {
     expect(devSummary(list)).toEqual({ waiting: 2, earliestPromise: '2026-12-08', atRisk: 1 });
+  });
+});
+
+describe('customerFor', () => {
+  it('reuses the customer name from the latest promise on the request', () => {
+    const older = promise({ id: 'a', customer: 'Acme Corp', madeAt: '2026-11-01T10:00:00.000Z' });
+    const newer = promise({ id: 'b', customer: 'Acme (EMEA)', madeAt: '2026-11-20T10:00:00.000Z' });
+    expect(customerFor([older, newer], 'Sam Lee')).toBe('Acme (EMEA)');
+  });
+
+  it('falls back to the organization or reporter when there are no promises', () => {
+    expect(customerFor([], 'Sam Lee')).toBe('Sam Lee');
+    expect(customerFor([promise({ customer: '  ' })], 'Sam Lee')).toBe('Sam Lee');
   });
 });

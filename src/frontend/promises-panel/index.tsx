@@ -198,15 +198,16 @@ function TrackModal({ view, onClose, onDone }: { view: View; onClose: () => void
             <Text>Record what you told the customer. Kept checks it against the developer&apos;s plan from now on.</Text>
             <Stack space="space.050">
               <Label labelFor="kept-date">Promised date</Label>
-              <DatePicker id="kept-date" value={date} onChange={(v: string) => setDate(v)} minDate={view.today} />
+              <DatePicker id="kept-date" value={date} onChange={(v: string) => setDate(v)} minDate={view.today} placeholder="Select the date you gave" />
             </Stack>
+            {/* Text fields are uncontrolled: UI Kit round-trips each keystroke, and a controlled value drops fast typing. */}
             <Stack space="space.050">
               <Label labelFor="kept-text">What you promised (optional)</Label>
-              <TextArea id="kept-text" value={text} onChange={(e) => setText(String(e.target.value ?? ''))} placeholder="We expect the fix in the next release" />
+              <TextArea id="kept-text" defaultValue="" onChange={(e) => setText(String(e.target.value ?? ''))} placeholder="We expect the fix in the next release" />
             </Stack>
             <Stack space="space.050">
               <Label labelFor="kept-customer">Customer</Label>
-              <Textfield id="kept-customer" value={customer} onChange={(e) => setCustomer(String(e.target.value ?? ''))} />
+              <Textfield id="kept-customer" defaultValue={view.request.customer} onChange={(e) => setCustomer(String(e.target.value ?? ''))} />
             </Stack>
             {view.devItems.length > 1 && (
               <Stack space="space.050">
@@ -248,12 +249,15 @@ function DraftModal({ view, onClose, onDone }: { view: View; onClose: () => void
   const [newDate, setNewDate] = useState<string>('');
   const [error, setError] = useState<string>();
   const [busy, setBusy] = useState(false);
+  // Bumped on every new draft so the (uncontrolled) message field shows the fresh text.
+  const [draftNo, setDraftNo] = useState(0);
 
   const load = useCallback(async (date?: string) => {
     try {
       const d = await call<Draft>('draftUpdate', date ? { newDate: date } : {});
       setDraft(d);
       setText(d.text);
+      setDraftNo((n) => n + 1);
       setNewDate(d.newDate ?? '');
     } catch (e) {
       setError((e as Error).message);
@@ -296,6 +300,7 @@ function DraftModal({ view, onClose, onDone }: { view: View; onClose: () => void
                   id="kept-new-date"
                   value={newDate}
                   minDate={view.today}
+                  placeholder="No new date"
                   onChange={(v: string) => {
                     setNewDate(v);
                     void load(v);
@@ -306,7 +311,13 @@ function DraftModal({ view, onClose, onDone }: { view: View; onClose: () => void
             </Stack>
             <Stack space="space.050">
               <Label labelFor="kept-message">Message to the customer</Label>
-              <TextArea id="kept-message" value={text} minimumRows={10} onChange={(e) => setText(String(e.target.value ?? ''))} />
+              <TextArea
+                key={`kept-message-${draftNo}`}
+                id="kept-message"
+                defaultValue={text}
+                minimumRows={10}
+                onChange={(e) => setText(String(e.target.value ?? ''))}
+              />
             </Stack>
             {internal && (
               <SectionMessage appearance="warning" title="Check for internal details">

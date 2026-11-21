@@ -6,14 +6,21 @@ import { RISK_STYLE } from '../../domain/labels';
 import type { RiskLevel } from '../../domain/types';
 
 export const styles = {
+  // Bordered, not shadowed: matches Jira's own panels in the work item view.
   card: xcss({
-    backgroundColor: 'elevation.surface.raised',
-    boxShadow: 'elevation.shadow.raised',
+    backgroundColor: 'elevation.surface',
+    borderWidth: 'border.width',
+    borderStyle: 'solid',
+    borderColor: 'color.border',
     borderRadius: 'radius.large',
     padding: 'space.150',
   }),
+  // Risk shows through the border and the lozenge; the alarm banner above carries the colour.
   dangerCard: xcss({
-    backgroundColor: 'color.background.danger',
+    backgroundColor: 'elevation.surface',
+    borderWidth: 'border.width.selected',
+    borderStyle: 'solid',
+    borderColor: 'color.border.danger',
     borderRadius: 'radius.large',
     padding: 'space.150',
   }),

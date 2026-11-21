@@ -3,6 +3,7 @@
 import { randomUUID } from 'node:crypto';
 import { daysBetween, formatDateWithDay, isIsoDate } from '../domain/dates';
 import { detectCommitments } from '../domain/detect';
+import { customerFor } from '../domain/evaluate';
 import { nextRelease } from '../domain/expected';
 import { RISK_RANK } from '../domain/risk';
 import type { PromiseRecord } from '../domain/types';
@@ -54,6 +55,7 @@ export async function trackPromise(input: TrackInput): Promise<PromiseRecord> {
     throw new UserError(`${devIssueKey} isn't linked to ${request.key}. Link the developer's work item first.`);
   }
   devIssueKey ??= items[0]?.key;
+  const customer = input.customer?.trim() || customerFor(await promisesForRequest(request.key), request.customer);
 
   const now = new Date().toISOString();
   const record: PromiseRecord = {
@@ -62,7 +64,7 @@ export async function trackPromise(input: TrackInput): Promise<PromiseRecord> {
     requestId: request.id,
     projectKey: request.projectKey,
     devIssueKey,
-    customer: (input.customer?.trim() || request.customer).slice(0, 120),
+    customer: customer.slice(0, 120),
     promisedDate: input.promisedDate,
     text: (input.text ?? '').trim().slice(0, 500),
     source: input.source,

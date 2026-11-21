@@ -2,7 +2,7 @@
 // a dev work item, and the promises overview for support leads.
 import { addDays, daysBetween } from '../domain/dates';
 import { describePlan } from '../domain/expected';
-import { requestSummary } from '../domain/evaluate';
+import { customerFor, requestSummary } from '../domain/evaluate';
 import { RISK_RANK } from '../domain/risk';
 import { RISK_STYLE } from '../domain/labels';
 import type { DevSnapshot, PromiseRecord, RiskLevel } from '../domain/types';
@@ -68,7 +68,7 @@ export async function requestView(requestKey: string) {
       key: request.key,
       summary: request.summary,
       status: request.status,
-      customer: request.customer,
+      customer: customerFor(promises, request.customer),
       reporterName: request.reporterName,
     },
     devItems: items,

@@ -8,6 +8,7 @@ modules:
       render: native
       title: Customer promises
       label: Kept
+      icon: resource:icons;kept.svg
       dynamicProperties:
         function: request-badge
       displayConditions:
@@ -19,6 +20,7 @@ modules:
       render: native
       title: Customers waiting
       label: Kept
+      icon: resource:icons;kept.svg
       dynamicProperties:
         function: dev-badge
       displayConditions:
@@ -30,6 +32,7 @@ modules:
         function: resolver
       render: native
       title: Kept
+      icon: resource:icons;kept.svg
   jiraServiceManagement:queuePage:
     - key: kept-queue-page
       resource: dashboard
@@ -37,6 +40,7 @@ modules:
         function: resolver
       render: native
       title: Customer promises
+      icon: resource:icons;kept.svg
   jira:adminPage:
     - key: kept-settings
       resource: admin
@@ -44,6 +48,7 @@ modules:
         function: resolver
       render: native
       title: Kept
+      icon: resource:icons;kept.svg
   jiraServiceManagement:portalRequestDetail:
     - key: kept-portal
       resource: portal
@@ -59,6 +64,7 @@ modules:
   rovo:agent:
     - key: kept-agent
       name: Kept
+      icon: resource:icons;kept.svg
       description: "Tracks promises support makes to customers about fixes, warns when the developer plan slips, and drafts honest customer updates."
       prompt: resource:agent-prompt;prompt.md
       conversationStarters:
@@ -268,6 +274,8 @@ resources:
     path: src/frontend/portal/index.tsx
   - key: agent-prompt
     path: resources/agent
+  - key: icons
+    path: resources/icons
 
 app:
   runtime:

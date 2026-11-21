@@ -82,6 +82,15 @@ export function applyAssessment(
   };
 }
 
+/**
+ * The customer name to use for a new promise on a request: the one agents already used on the
+ * latest promise there, else the request's organization or reporter.
+ */
+export function customerFor(promises: readonly PromiseRecord[], fallback: string): string {
+  const latest = [...promises].filter((p) => p.customer?.trim()).sort((a, b) => b.madeAt.localeCompare(a.madeAt))[0];
+  return latest?.customer.trim() || fallback;
+}
+
 /** Summary written to the request's indexed property (drives JQL and the queue). */
 export function requestSummary(promises: PromiseRecord[]) {
   const live = promises.filter((p) => p.state === 'open');

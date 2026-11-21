@@ -67,6 +67,18 @@ describe('tracking a promise', () => {
     await expect(trackPromise({ requestKey: 'SUP-1', promisedDate: '2026-12-12', devIssueKey: 'BUG-9', source: 'manual' })).rejects.toThrow(/isn't linked/);
   });
 
+  it('reuses the customer name agents already gave on this request', async () => {
+    // A request without an organization: Jira only knows the reporter.
+    addIssue('SUP-2', { summary: 'SSO fails', status: status('new'), reporter: { displayName: 'Sam Lee', accountId: 'cust-2' } });
+    link('SUP-2', 'BUG-1');
+    expect((await requestView('SUP-2')).request?.customer).toBe('Sam Lee');
+    await trackPromise({ requestKey: 'SUP-2', promisedDate: '2026-12-12', customer: 'Hooli', source: 'manual' });
+    expect((await requestView('SUP-2')).request?.customer).toBe('Hooli');
+    // Re-promising with no open promise left (e.g. it was a suggestion) still keeps "Hooli".
+    const second = await trackPromise({ requestKey: 'SUP-2', promisedDate: '2026-12-15', source: 'manual' });
+    expect(second.customer).toBe('Hooli');
+  });
+
   it("refuses requests the user can't see", async () => {
     jira.hiddenFromUser.add('SUP-1');
     await expect(trackPromise({ requestKey: 'SUP-1', promisedDate: '2026-12-12', source: 'manual' })).rejects.toThrow(/can't see it/);
