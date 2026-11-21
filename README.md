@@ -5,6 +5,7 @@
 A Forge app for Jira Service Management, Jira and Rovo. Built for Codegeist 2026 (category: Apps for Business Teams; bonus: Best Rovo Agents).
 
 - **Install link:** _added before submission_
+- **Code:** https://github.com/saisharandomakonda/kept
 - **Demo video:** _added before submission_
 - **Devpost:** _added before submission_
 
@@ -80,7 +81,7 @@ flowchart LR
 - **Forge modules:** `jira:issueContext` ×2 (with live status badges), `jira:globalPage`, `jiraServiceManagement:queuePage`, `jiraServiceManagement:portalRequestDetail`, `jira:adminPage`, `jira:entityProperty` (JQL), `trigger` ×5, `scheduledTrigger`, `rovo:agent`, `action` ×5.
 - **UI:** UI Kit (`@forge/react`) with Atlassian Design System components and design tokens only, so it matches Jira, including dark mode.
 - **Storage:** Forge KVS custom entities with indexes (by request, by developer item, by state).
-- **No external calls and no paid AI.** Rovo comes with the site. The Forge CLI reports each deploy as eligible for Atlassian's "Runs on Atlassian" program.
+- **No external calls and no paid AI.** Rovo comes with the site. `forge eligibility` confirms the production version qualifies for Atlassian's "Runs on Atlassian" program.
 
 More detail: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) · [docs/DATA-AND-PRIVACY.md](docs/DATA-AND-PRIVACY.md) · [docs/TEST-PLAN.md](docs/TEST-PLAN.md)
 
