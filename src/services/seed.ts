@@ -10,7 +10,7 @@ import { addDays, formatDateWithDay } from '../domain/dates';
 import type { PromiseRecord } from '../domain/types';
 import { addCustomerReply } from '../jira/comments';
 import { jiraGet, jiraSend } from '../jira/http';
-import { createRelease, createSprint, scrumBoards, updateSprint, moveToSprint } from '../jira/projects';
+import { createRelease, createSprint, sprintBoards, updateSprint, moveToSprint } from '../jira/projects';
 import { searchIssues } from '../jira/issues';
 import { deletePromise, promisesForRequest } from '../store/promises';
 import { today } from './clock';
@@ -220,7 +220,7 @@ async function prepare(s: SampleStatus) {
     project.issueTypes.find((t) => !t.subtask);
   if (!issueType) throw new UserError(`${devKey} has no usable work type.`);
 
-  const boards = await scrumBoards(devKey, 'user').catch((e: Error) => {
+  const boards = await sprintBoards(devKey, 'user').catch((e: Error) => {
     console.warn(`Kept sample: could not read boards for ${devKey}: ${e.message}`);
     return [];
   });

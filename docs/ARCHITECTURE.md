@@ -66,7 +66,7 @@
 
 ## Tests
 
-`npm run verify` runs type checking, ESLint and 125 Vitest tests:
+`npm run verify` runs type checking, ESLint and 129 Vitest tests:
 - domain tests for every rule and its wording;
 - end-to-end service tests against in-memory fakes of Jira REST and Forge KVS. The fake storage enforces Forge's real key rules.
 

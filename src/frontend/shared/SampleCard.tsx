@@ -171,8 +171,9 @@ export function SampleCard({ onChange }: { onChange?: () => void }) {
             <SectionMessage appearance="success" title="Sample scenario ready">
               <Stack space="space.100">
                 <Text>
-                  Open a request to see its promises. Try it: move the Acme bug to the next sprint and watch its request turn
-                  red.
+                  {status.created.sprints.length > 0
+                    ? 'Open a request to see its promises. Try it: move the Acme bug to the next sprint and watch its request turn red.'
+                    : 'Open a request to see its promises. Try it: in the software space, open Releases and move v2.4 a few weeks later. Then watch the Acme request turn red.'}
                 </Text>
                 <Inline space="space.150" shouldWrap>
                   {requests.map((k, i) => (

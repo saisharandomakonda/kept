@@ -75,9 +75,28 @@ export interface BoardRef {
   type: string;
 }
 
-export async function scrumBoards(projectKey: string, actor: Actor = 'user'): Promise<BoardRef[]> {
-  const res = await jiraGet<{ values: BoardRef[] }>(actor, route`/rest/agile/1.0/board?projectKeyOrId=${projectKey}&type=scrum`);
-  return res.values ?? [];
+/**
+ * Boards in a space that can hold sprints. Company-managed Scrum boards report type "scrum".
+ * Team-managed boards report "simple" whether they run sprints or not, so each one is asked for
+ * its sprints: a Kanban board answers 400 "The board does not support sprints".
+ */
+export async function sprintBoards(projectKey: string, actor: Actor = 'user'): Promise<BoardRef[]> {
+  const res = await jiraGet<{ values: BoardRef[] }>(actor, route`/rest/agile/1.0/board?projectKeyOrId=${projectKey}&maxResults=50`);
+  const out: BoardRef[] = [];
+  for (const b of res.values ?? []) {
+    if (b.type === 'scrum') out.push(b);
+    else if (b.type === 'simple' && (await hasSprints(b.id, actor))) out.push(b);
+  }
+  return out;
+}
+
+async function hasSprints(boardId: number, actor: Actor): Promise<boolean> {
+  try {
+    await jiraGet(actor, route`/rest/agile/1.0/board/${String(boardId)}/sprint?maxResults=1`);
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 export async function createSprint(

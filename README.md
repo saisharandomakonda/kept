@@ -4,7 +4,7 @@
 
 A Forge app for Jira Service Management, Jira and Rovo. Built for Codegeist 2026 (category: Apps for Business Teams; bonus: Best Rovo Agents).
 
-- **Install link:** _added before submission_
+- **Install link:** [Install Kept on your Jira site](https://developer.atlassian.com/console/install/3471444e-dcdc-45df-867b-a9624ec8ceb4?signature=AYABePFXvQezj2B7y3EZWTy9oPgAAAADAAdhd3Mta21zAEthcm46YXdzOmttczp1cy13ZXN0LTI6NzA5NTg3ODM1MjQzOmtleS83MDVlZDY3MC1mNTdjLTQxYjUtOWY5Yi1lM2YyZGNjMTQ2ZTcAuAECAQB4CxqLTo9l4lqXuFjNim1xJM%2Bp%2F3TVP9xHS2BrU5DRRucB8%2FwcgDIphpJmDvvRG79fQAAAAH4wfAYJKoZIhvcNAQcGoG8wbQIBADBoBgkqhkiG9w0BBwEwHgYJYIZIAWUDBAEuMBEEDBCGkL8IeY3s1eRVbQIBEIA7lQJylhvv0r25eEKX3nJgznM3JZ9QeJ7wKGP2qL3gTKcWhppUheNlcM%2FSYPvu2eAKgjG7Isy3%2BdSkyHsAB2F3cy1rbXMAS2Fybjphd3M6a21zOmV1LXdlc3QtMTo3MDk1ODc4MzUyNDM6a2V5LzQ2MzBjZTZiLTAwYzMtNGRlMi04NzdiLTYyN2UyMDYwZTVjYwC4AQICAHi9bVMAkme4qVQX1fQHo6ePw3H40A7cGfz7yrmSfBWMXgHxWG%2BzV7NFaEWwOqWWhqhfAAAAfjB8BgkqhkiG9w0BBwagbzBtAgEAMGgGCSqGSIb3DQEHATAeBglghkgBZQMEAS4wEQQMl21YHTRkLBKy%2FvnWAgEQgDt%2FHSoSA0HwHV52w6v0jZfnfgJOvWjle5dCPT%2F1fENOri8qH%2F4Eb%2FV2%2B%2FH0xAY%2BbNtpA6bEcIsl3ObyvQAHYXdzLWttcwBLYXJuOmF3czprbXM6dXMtZWFzdC0xOjcwOTU4NzgzNTI0MzprZXkvNmMxMjBiYTAtNGNkNS00OTg1LWI4MmUtNDBhMDQ5NTJjYzU3ALgBAgIAeDYASx0XCjkny4iLV6vz%2BKtEGSGT6kdt0QRpkn6D%2FlVEAeeUv14PjGlYzRiXP6Myx6cAAAB%2BMHwGCSqGSIb3DQEHBqBvMG0CAQAwaAYJKoZIhvcNAQcBMB4GCWCGSAFlAwQBLjARBAw5MERuuDBWUa2rEEwCARCAO%2FgtUzBzeQ121YacIt%2F663gBEopHBdJiPAGxFIptBXmxoDerDCZtqrZqVOu5VxHjcYKfLlbjNT2MCuINAgAAAAAMAAAQAAAAAAAAAAAAAAAAAD0q7iu5VhDIvBSP49mBol7%2F%2F%2F%2F%2FAAAAAQAAAAAAAAAAAAAAAQAAADK3iBXqBTL1XIkBBQ3v7pcoelxLjeNKBDI1%2F9oM%2Fq98FMe0mKe99BStkn%2FTk0oJGIppiiRqfHUBVfmD0AxL1Xp6CQw%3D&product=jira) (pick your site, then accept the permissions)
 - **Code:** https://github.com/saisharandomakonda/kept
 - **Demo video:** _added before submission_
 - **Devpost:** _added before submission_
@@ -97,7 +97,7 @@ Requires Node 24 and the Forge CLI (`npm i -g @forge/cli`).
 
 ```bash
 npm install
-npm run verify                  # type check + lint + 125 tests (domain rules and end-to-end services against in-memory fakes)
+npm run verify                  # type check + lint + 129 tests (domain rules and end-to-end services against in-memory fakes)
 forge register                  # once, if you forked this repo
 forge deploy -e development
 forge install --product jira    # pick your site

@@ -9,7 +9,7 @@ import { worstRisk } from '../../domain/risk';
 import type { RiskLevel } from '../../domain/types';
 import { jiraGet } from '../../jira/http';
 import { canSeeWorkItem } from '../../jira/permissions';
-import { listSpaces, scrumBoards } from '../../jira/projects';
+import { listSpaces, sprintBoards } from '../../jira/projects';
 import { dashboard, devView, requestView } from '../../services/chain';
 import { today } from '../../services/clock';
 import { evaluateRequest } from '../../services/evaluate';
@@ -164,7 +164,7 @@ define('spaces', async () => {
     software: spaces.filter((s) => s.type === 'software'),
   };
 });
-define('boards', async (p) => scrumBoards(str(p.projectKey, 20) ?? '', 'user'));
+define('boards', async (p) => sprintBoards(str(p.projectKey, 20) ?? '', 'user'));
 define('sampleStatus', async () => sampleStatusWithLeftovers());
 define('sampleStep', async () => {
   await requireAdmin();

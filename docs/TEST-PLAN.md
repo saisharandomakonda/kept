@@ -14,6 +14,7 @@ npm run verify     # type check + lint + all tests
 | Detection | `test/domain/detect.test.ts` | 11 promise phrasings found, 8 non-promises ignored, quoting, ADF |
 | Drafts, portal, changes | `test/domain/draft-portal-changes.test.ts` | Customer text never leaks internals; portal exposes 4 safe fields only; changelog wording |
 | Transitions | `test/domain/evaluate.test.ts` | One alert per slip, quiet recovery, re-alert on a new slip, kept/kept-late, JQL summaries |
+| Boards | `test/jira/projects.test.ts` | Sample finds sprint boards in company-managed and team-managed spaces, skips Kanban |
 | Pipeline | `test/services/pipeline.test.ts` | Against fake Jira + storage: track → developer moves sprint → 1 internal note + 1 dev heads-up + JQL fields → quiet recovery; settings respected; unlink; hourly sweep; re-promise; detection; portal access; Rovo actions |
 
 ## On the demo site (after each deploy that touches them)
@@ -37,6 +38,7 @@ npm run verify     # type check + lint + all tests
 | E15 | Remove sample data | Everything created is gone, nothing else touched | ✅ 2026-11-20: removes exactly the sample items; leftovers banner works |
 | E16 | Unlink the dev item | Promise shows "No link" and stops alerting | ⬜ not run live (covered by pipeline test) |
 | E17 | Install on a plain site (Jira only, no service space) | Installs; explains what's missing | ✅ 2026-11-21: installs cleanly; sample card says a service space is needed; Ask Rovo hidden without Rovo |
+| E18 | Judge path: install link on a second site with JSM Free, a team-managed service space and a team-managed Scrum space (the defaults a judge gets) | Install page shows vendor, privacy, permissions; sample loads with sprints and releases; the README script works | 🟡 2026-11-21: install page and install ✅; Kept page, sample card picks the right spaces ✅; sample created requests, releases v2.3/v2.4 and promises ✅ (releases work in team-managed spaces). Found bug 14 (no sprints). Fix deployed in production 2.1.0; re-test pending |
 
 ## Bugs found by live testing (2026-11-20), all fixed with a regression test or guard
 1. "Report a bug" request type has no description field → sample failed. Now only sends fields the type has.
@@ -54,6 +56,7 @@ npm run verify     # type check + lint + all tests
 11. The date picker showed a confusing example date ("2/18/1993"). Now says "Select the date you gave".
 12. Titles were shown twice on the queue page and settings page. Removed the extra heading.
 13. On a site without a service space, the sample card was a dead end (empty lists, disabled button). It now explains what to add.
+14. Team-managed Scrum spaces got no sample sprints. Jira reports their board as type "simple", not "scrum", and Kept only looked for "scrum". Kept now asks each "simple" board for its sprints (Kanban boards answer "does not support sprints"). The sample card tip now says what to try when there are no sprints (move release v2.4). Tests added (`test/jira/projects.test.ts`).
 
 ## Fixed after judge review #1 (2026-11-21)
 - The Promises page and Rovo now show only promises from spaces the person can browse. Rovo checks that the person can open a developer work item before describing it. Tests added.

@@ -119,6 +119,8 @@ export const jira = {
   issues: new Map<string, FakeIssue>(),
   projects: new Map<string, { id: string; key: string; name: string; projectTypeKey: string }>(),
   sprints: new Map<number, { id: number; name: string; state: string }>(),
+  /** Agile boards. Team-managed boards are type "simple"; `sprints` says whether sprints are on. */
+  boards: [] as { id: number; name: string; type: string; projectKey: string; sprints: boolean }[],
   calls: [] as { actor: string; method: string; path: string; body?: unknown }[],
   /** Requests the "user" is NOT allowed to see. */
   hiddenFromUser: new Set<string>(),
@@ -128,6 +130,7 @@ export const jira = {
     this.issues.clear();
     this.projects.clear();
     this.sprints.clear();
+    this.boards = [];
     this.calls = [];
     this.hiddenFromUser.clear();
     this.hiddenSpaces.clear();
@@ -192,6 +195,17 @@ function handle(actor: string, method: string, url: string, body?: Json) {
   if ((m = p.match(/^\/rest\/api\/3\/project\/([A-Z0-9]+)$/))) {
     const proj = jira.projects.get(m[1] as string);
     return proj ? res(200, proj) : res(404, { errorMessages: ['No project'] });
+  }
+  if (p === '/rest/agile/1.0/board') {
+    const key = params.get('projectKeyOrId');
+    const type = params.get('type');
+    const values = jira.boards.filter((b) => b.projectKey === key && (!type || b.type === type)).map(({ id, name, type: t }) => ({ id, name, type: t }));
+    return res(200, { values });
+  }
+  if ((m = p.match(/^\/rest\/agile\/1\.0\/board\/(\d+)\/sprint$/))) {
+    const b = jira.boards.find((x) => x.id === Number(m?.[1]));
+    if (!b) return res(404);
+    return b.sprints ? res(200, { values: [] }) : res(400, { errorMessages: ['The board does not support sprints'] });
   }
   if ((m = p.match(/^\/rest\/agile\/1\.0\/sprint\/(\d+)$/))) {
     const s = jira.sprints.get(Number(m[1]));
