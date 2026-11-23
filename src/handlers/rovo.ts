@@ -7,11 +7,12 @@ import type { PromiseRecord } from '../domain/types';
 import { listComments } from '../jira/comments';
 import { getRequest } from '../jira/issues';
 import { canSeeWorkItem } from '../jira/permissions';
-import { isServiceSpace } from '../jira/projects';
+import { isServiceSpace, spaceType } from '../jira/projects';
 import { isCustomerAccount } from '../jira/users';
 import { dashboard, devView, requestView } from '../services/chain';
 import { today } from '../services/clock';
-import { looksInternal } from '../domain/draft';
+import { keyPrefixes, looksInternal, suggestDate } from '../domain/draft';
+import { getSettings } from '../store/settings';
 import { tellCustomer, trackPromise, UserError } from '../services/promises';
 
 interface ActionPayload {
@@ -54,7 +55,16 @@ async function safely<T>(fn: () => Promise<T>): Promise<T | { error: string }> {
   }
 }
 
-function brief(p: PromiseRecord, day: string) {
+/** Internal words, or a key from a real space ("UTF-8" and "ISO-8601" are fine). */
+async function mentionsInternal(text: string): Promise<boolean> {
+  if (looksInternal(text, [])) return true;
+  for (const prefix of keyPrefixes(text)) {
+    if (await spaceType(prefix).catch(() => undefined)) return true;
+  }
+  return false;
+}
+
+function brief(p: PromiseRecord, day: string, margin: number) {
   return {
     promiseId: p.id,
     customer: p.customer,
@@ -66,6 +76,8 @@ function brief(p: PromiseRecord, day: string) {
     expectedFrom: p.expectedSource ?? null,
     whatWasPromised: p.text || null,
     reasons: p.reasons.map((r) => r.message),
+    // Same rule as the panel's Draft update, so Rovo and the panel propose the same date.
+    suggestedNewDate: suggestDate(p, margin) ?? null,
     dependsOn: p.devIssueKey ?? null,
     customerLastUpdated: p.customerToldAt ?? null,
     recentHistory: p.history.slice(-4).map((h) => `${h.at.slice(0, 10)}: ${h.text}`),
@@ -77,6 +89,7 @@ export async function getPromiseContext(payload: ActionPayload, _ctx?: ActionCon
     const key = resolveKey(payload);
     const projectKey = key.split('-')[0] as string;
     const day = today();
+    const margin = (await getSettings()).bufferDays;
     if (!(await isServiceSpace(projectKey))) {
       // A developer work item: who is waiting on it?
       if (!(await canSeeWorkItem(key))) throw new UserError(`Work item ${key} was not found, or you can't see it.`);
@@ -86,7 +99,7 @@ export async function getPromiseContext(payload: ActionPayload, _ctx?: ActionCon
         kind: 'developer work item',
         customersWaiting: v.waiting,
         promisesAtRisk: v.atRisk,
-        promises: v.promises.map((p) => ({ request: p.requestKey, ...brief(p, day) })),
+        promises: v.promises.map((p) => ({ request: p.requestKey, ...brief(p, day, margin) })),
       };
     }
     const v = await requestView(key);
@@ -95,7 +108,7 @@ export async function getPromiseContext(payload: ActionPayload, _ctx?: ActionCon
       today: day,
       request: { key: v.request.key, summary: v.request.summary, status: v.request.status, customer: v.request.customer, reporter: v.request.reporterName },
       developerWork: v.devItems.map((d) => ({ key: d.key, summary: d.summary, status: d.status, plan: d.plan, assignee: d.assignee ?? 'Unassigned' })),
-      promises: v.promises.filter((p) => p.state !== 'withdrawn').map((p) => brief(p, day)),
+      promises: v.promises.filter((p) => p.state !== 'withdrawn').map((p) => brief(p, day, margin)),
       guidance:
         'For customer messages: be honest and specific, apologise once if a date moved, and never include work item keys, sprint or release names, or people.',
     };
@@ -107,6 +120,7 @@ export async function listPromisesAtRisk(payload: ActionPayload) {
     const days = Math.min(Math.max(Number(payload.days ?? 7) || 7, 1), 90);
     const projectKey = payload.projectKey?.trim().toUpperCase() || undefined;
     const d = await dashboard(projectKey);
+    const margin = (await getSettings()).bufferDays;
     const rows = d.rows.filter((r) => r.risk === 'at-risk' || r.risk === 'broken' || r.risk === 'tight' || r.daysLeft <= days);
     return {
       today: d.today,
@@ -118,6 +132,7 @@ export async function listPromisesAtRisk(payload: ActionPayload) {
         promisedDate: r.promisedDate,
         daysUntilPromise: r.daysLeft,
         expectedFixDate: r.expectedDate ?? null,
+        suggestedNewDate: suggestDate(r, margin) ?? null,
         status: RISK_STYLE[r.risk].label,
         why: r.why,
         customerLastUpdated: r.customerToldAt ?? null,
@@ -165,7 +180,7 @@ export async function trackPromiseAction(payload: ActionPayload, ctx?: ActionCon
       accountId: accountOf(ctx),
       actor: 'user',
     });
-    return { tracked: true, ...brief(p, today()) };
+    return { tracked: true, ...brief(p, today(), (await getSettings()).bufferDays) };
   });
 }
 
@@ -174,14 +189,14 @@ export async function postCustomerUpdate(payload: ActionPayload, ctx?: ActionCon
     const key = resolveKey(payload);
     const newDate = payload.newPromisedDate?.trim() || undefined;
     if (newDate && !isIsoDate(newDate)) throw new UserError('newPromisedDate must be a date in YYYY-MM-DD form.');
-    if (looksInternal(payload.message ?? '')) {
+    if (await mentionsInternal(payload.message ?? '')) {
       throw new UserError('The message mentions internal details (a work item key, sprint, backlog or Jira). Rewrite it for the customer, then try again.');
     }
     const r = await tellCustomer({ requestKey: key, message: payload.message ?? '', newDate, accountId: accountOf(ctx) });
     return {
       sent: true,
       request: key,
-      newPromise: r.newPromise ? brief(r.newPromise, today()) : null,
+      newPromise: r.newPromise ? brief(r.newPromise, today(), (await getSettings()).bufferDays) : null,
     };
   });
 }

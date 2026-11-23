@@ -65,8 +65,10 @@ const STORIES = [
     sprint: 'A',
     release: '2.4',
     promiseOffset: 12,
-    reply: (d: string, rel: string) =>
-      `Thanks for the logs, they helped us find the cause. The fix is scheduled for release ${rel}, so we expect you to have it by ${d}.`,
+    reply: (d: string, rel?: string) =>
+      rel
+        ? `Thanks for the logs, they helped us find the cause. The fix is scheduled for release ${rel}, so we expect you to have it by ${d}.`
+        : `Thanks for the logs, they helped us find the cause. The fix is planned, so we expect you to have it by ${d}.`,
     track: true,
   },
   {
@@ -299,7 +301,10 @@ async function transitionTo(key: string, category: string) {
 async function devItems(s: SampleStatus) {
   const p = plan(s);
   for (const story of STORIES) {
-    const fixVersions = story.release === '2.4' && p.v24 ? [{ id: p.v24 }] : story.release === '2.3' && p.v23 ? [{ id: p.v23 }] : [];
+    // Without sprints, Acme's plan is its due date alone, so a judge can make it slip by changing that
+    // date (a release would win over it, and team-managed spaces may hide the Releases page).
+    const fixVersions =
+      story.release === '2.4' && p.v24 && p.boardId ? [{ id: p.v24 }] : story.release === '2.3' && p.v23 ? [{ id: p.v23 }] : [];
     const created = await jiraSend<{ key: string }>('user', 'POST', route`/rest/api/3/issue`, {
       fields: {
         project: { id: p.devProjectId },
@@ -359,7 +364,7 @@ async function promises(s: SampleStatus) {
       requestKey: p.requests[i] as string,
       devIssueKey: p.devs[i],
       promisedDate: date,
-      text: story.reply(formatDateWithDay(date, p.day), p.v24Name),
+      text: story.reply(formatDateWithDay(date, p.day), p.boardId ? p.v24Name : undefined),
       customer: story.customer,
       source: 'sample',
       actor: 'user',
@@ -373,7 +378,7 @@ async function replies(s: SampleStatus) {
     const story = STORIES[i]!;
     const date = story.promiseOffset !== undefined ? addDays(p.day, story.promiseOffset) : p.day;
     const pretty = formatDateWithDay(date, p.day);
-    const body = 'followUp' in story ? story.followUp(pretty) : story.reply(pretty, p.v24Name);
+    const body = 'followUp' in story ? story.followUp(pretty) : story.reply(pretty, p.boardId ? p.v24Name : undefined);
     const key = p.requests[i] as string;
     const commentId = await addCustomerReply(key, `Hi,\n\n${body}\n\nThanks,\nSupport team`);
     // Forge doesn't send the app events for its own changes, so run detection here: exactly what

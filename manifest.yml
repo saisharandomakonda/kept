@@ -39,7 +39,7 @@ modules:
       resolver:
         function: resolver
       render: native
-      title: Customer promises
+      title: Promises
       icon: resource:icons;kept.svg
   jira:adminPage:
     - key: kept-settings

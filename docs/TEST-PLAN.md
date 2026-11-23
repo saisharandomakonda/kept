@@ -58,6 +58,17 @@ npm run verify     # type check + lint + all tests
 13. On a site without a service space, the sample card was a dead end (empty lists, disabled button). It now explains what to add.
 14. Team-managed Scrum spaces got no sample sprints. Jira reports their board as type "simple", not "scrum", and Kept only looked for "scrum". Kept now asks each "simple" board for its sprints (Kanban boards answer "does not support sprints"). The sample card tip now says what to try when there are no sprints (move release v2.4). Tests added (`test/jira/projects.test.ts`).
 
+## Fixed after judge review #2 (2026-11-23)
+- The date Kept suggests in **Draft update** could be marked Tight straight after sending (the work item was still tagged a release that ships before its sprint ends). The draft window now says so up front, and the README explains it. Shared `suggestDate()` rule; Rovo actions return the same `suggestedNewDate`. Tests added.
+- Tight promises were described to customers as "still on track". New honest wording; the agent prompt says the same. Test added.
+- The internal-details guard blocked ordinary words like "UTF-8". Only keys of real spaces count now (Rovo checks the space exists; the panel uses the request's own spaces). Tests added.
+- The portal showed "Fix progress" on every request, even with no promise. Now only where support tracked a promise. Tests updated.
+- The red banner repeated the first reason word for word; it now gives a one-line summary ("…was promised Sat, Dec 5, but the fix is now expected Wed, Dec 16.").
+- Chart colours now follow the status lozenges (green, yellow, red, grey). Request keys no longer wrap in the table. Date pickers show "Dec 18, 2026".
+- Queue sidebar page renamed "Promises" (it shared the request panel's title).
+- Sample without sprints: the Acme bug now relies on its due date only, so the slip is "change the Due date" (works even where the Releases page is hidden).
+- README: Rovo section with prompts and guardrails, a "try it on your own data" step, known limits; removed the untested dark-mode claim and the "no paid AI" claim.
+
 ## Fixed after judge review #1 (2026-11-21)
 - The Promises page and Rovo now show only promises from spaces the person can browse. Rovo checks that the person can open a developer work item before describing it. Tests added.
 - The customer draft no longer greets the agent as the customer (sample or self-raised requests).

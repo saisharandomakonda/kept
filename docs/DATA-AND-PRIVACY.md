@@ -37,7 +37,7 @@ Kept does **not** store request descriptions, comments, attachments, emails or c
 
 ## What customers see on the portal
 
-Only a stage (Reported, Confirmed, In development, Fixed, Released) and one sentence, plus the planned date if an admin turns that on (it is off by default). No work item keys, sprint names, people or internal notes. Kept first checks, as the viewing customer, that they can see the request.
+Nothing, unless support tracked a promise on that request. Then only a stage (Reported, Confirmed, In development, Fixed, Released) and one sentence, plus the planned date if an admin turns that on (it is off by default). No work item keys, sprint names, people or internal notes. Kept first checks, as the viewing customer, that they can see the request.
 
 ## Permissions (scopes) and why
 

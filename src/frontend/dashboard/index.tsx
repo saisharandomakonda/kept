@@ -21,6 +21,7 @@ import ForgeReconciler, {
 } from '@forge/react';
 import { rovo } from '@forge/bridge';
 import { formatDate, relativeDays } from '../../domain/dates';
+import { RISK_STYLE } from '../../domain/labels';
 import { RISK_RANK } from '../../domain/risk';
 import type { dashboard, DashboardRow } from '../../services/chain';
 import { AGENT, call } from '../shared/api';
@@ -47,14 +48,23 @@ const head = {
   cells: [
     // Widths are percentages; keys like ENGS-123 must not wrap.
     { key: 'customer', content: 'Customer', isSortable: true, width: 12 },
-    { key: 'request', content: 'Request', width: 10 },
+    { key: 'request', content: 'Request', width: 12 },
     { key: 'promised', content: 'Promised', isSortable: true, width: 10 },
     { key: 'expected', content: 'Fix expected', width: 10 },
     { key: 'risk', content: 'Status', isSortable: true, width: 9 },
-    { key: 'why', content: 'Why', width: 39 },
+    { key: 'why', content: 'Why', width: 37 },
     { key: 'told', content: 'Customer told', width: 10 },
   ],
 };
+
+// Chart colours follow the status lozenges: green, yellow, red, grey. Charts take hex values, not tokens;
+// these are the Atlassian palette's mid tones, readable in light and dark themes.
+const CHART_COLOURS = [
+  { key: RISK_STYLE['on-track'].label, value: '#22A06B' },
+  { key: RISK_STYLE.tight.label, value: '#E2B203' },
+  { key: RISK_STYLE['at-risk'].label, value: '#E2483D' },
+  { key: RISK_STYLE.unplanned.label, value: '#8590A2' },
+];
 
 function rows(list: DashboardRow[], today: string) {
   return list.map((r) => ({
@@ -128,7 +138,7 @@ function App() {
     <Stack space="space.300">
       <Inline spread="space-between" alignBlock="center">
         <Stack space="space.050">
-          {/* Jira already shows the page title ("Kept" in Apps, "Customer promises" in the queue sidebar). */}
+          {/* Jira already shows the page title ("Kept" in Apps, "Promises" in the queue sidebar). */}
           <Text color="color.text.subtle">
             Every fix date support gave a customer, checked against the live developer plan{isQueuePage && projectKey ? ` for ${projectKey}` : ''}.
           </Text>
@@ -221,6 +231,7 @@ function App() {
               xAccessor="week"
               yAccessor="count"
               colorAccessor="risk"
+              colorPalette={CHART_COLOURS}
               height={260}
             />
           </Stack>

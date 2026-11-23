@@ -231,7 +231,12 @@ describe('promise detection in replies', () => {
 });
 
 describe('customer portal', () => {
+  it('shows nothing on requests where support never gave a date', async () => {
+    expect(await portalForRequest('SUP-1')).toEqual({ hidden: true });
+  });
+
   it('shows only the safe stage to someone who can see the request', async () => {
+    await trackPromise({ requestKey: 'SUP-1', promisedDate: '2026-12-12', source: 'manual' });
     const v = await portalForRequest('SUP-1');
     expect(v).toEqual({ stageIndex: 2, stage: 'In development', message: 'A fix is being built.' });
     await saveSettings({ portalShowDate: true });
@@ -239,6 +244,7 @@ describe('customer portal', () => {
   });
 
   it('shows nothing to someone who cannot see the request, or when turned off', async () => {
+    await trackPromise({ requestKey: 'SUP-1', promisedDate: '2026-12-12', source: 'manual' });
     jira.hiddenFromUser.add('SUP-1');
     expect(await portalForRequest('SUP-1')).toEqual({ hidden: true });
     jira.hiddenFromUser.clear();
@@ -310,6 +316,23 @@ describe('Rovo actions', () => {
   it('refuses to send customer messages that mention internal details', async () => {
     const r = await postCustomerUpdate({ requestKey: 'SUP-1', message: 'BUG-1 slipped to Sprint 15, sorry about that.' });
     expect(r).toEqual({ error: expect.stringContaining('internal details') });
+    const key = await postCustomerUpdate({ requestKey: 'SUP-1', message: 'The fix for this is in BUG-1, nearly there.' });
+    expect(key).toEqual({ error: expect.stringContaining('internal details') });
     expect(jira.posted('comment')).toHaveLength(0);
+  });
+
+  it('sends normal technical words that only look like keys (UTF-8, ISO-8601)', async () => {
+    const r = await postCustomerUpdate({ requestKey: 'SUP-1', message: "We're fixing the UTF-8 handling so names with accents import correctly." });
+    expect(r).toMatchObject({ sent: true, request: 'SUP-1' });
+    expect(jira.posted('comment', 'SUP-1')).toHaveLength(1);
+  });
+
+  it('gives Rovo the same suggested new date as the Draft update', async () => {
+    // BUG-1 ships with release v2.4 on Dec 10; a promise for Dec 5 is late, so the suggestion is Dec 10 + 2 days.
+    await trackPromise({ requestKey: 'SUP-1', promisedDate: '2026-12-05', source: 'manual' });
+    const r = (await getPromiseContext({ requestKey: 'SUP-1' })) as { promises: { suggestedNewDate: string | null }[] };
+    expect(r.promises[0]?.suggestedNewDate).toBe('2026-12-12');
+    const list = (await listPromisesAtRisk({})) as { promises: { request: string; suggestedNewDate: string | null }[] };
+    expect(list.promises.find((p) => p.request === 'SUP-1')?.suggestedNewDate).toBe('2026-12-12');
   });
 });

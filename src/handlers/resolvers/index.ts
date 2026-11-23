@@ -2,8 +2,8 @@
 // can see; changes that need an admin check for one.
 import Resolver from '@forge/resolver';
 import { route } from '@forge/api';
-import { addDays, isIsoDate } from '../../domain/dates';
-import { draftCustomerUpdate } from '../../domain/draft';
+import { isIsoDate } from '../../domain/dates';
+import { draftCustomerUpdate, suggestDate } from '../../domain/draft';
 import { RISK_STYLE } from '../../domain/labels';
 import { worstRisk } from '../../domain/risk';
 import type { RiskLevel } from '../../domain/types';
@@ -107,14 +107,18 @@ define('draftUpdate', async (p, ctx) => {
   const focus = [...open].sort((a, b) => b.riskRank - a.riskRank)[0];
   if (!focus) throw new UserError('Track a promise first, then Kept can draft the update.');
   const day = today();
-  // Re-promise with the same safety margin Kept uses for "on track", so the new promise starts healthy.
-  const margin = Math.max((await getSettings()).bufferDays, 1);
-  const suggestedDate =
-    focus.expectedDate && focus.expectedDate > focus.promisedDate ? addDays(focus.expectedDate, margin) : undefined;
+  // The plan's date plus the safety margin Kept uses for "on track".
+  const suggestedDate = suggestDate(focus, (await getSettings()).bufferDays);
   const newDate = date(p.newDate) ?? (focus.risk === 'at-risk' || focus.risk === 'broken' ? suggestedDate : undefined);
+  // If the work item is still tagged with a release that ships before its sprint ends, any date stays
+  // "Tight" until a developer fixes the release. Say so up front instead of surprising the agent.
+  const staleRelease = focus.reasons.find((r) => r.code === 'sprint-after-release');
   return {
     newDate,
     suggestedDate,
+    note: staleRelease
+      ? `${focus.devIssueKey ?? 'The work item'} is still tagged with a release that ships before its sprint ends, so Kept will show the new promise as Tight until a developer moves it to a later release.`
+      : undefined,
     risk: focus.risk,
     text: draftCustomerUpdate({
       // Don't greet the agent as the customer: in the sample, and on internal desks, the reporter may be them.

@@ -37,7 +37,10 @@ import { AGENT, call } from '../shared/api';
 import { Card, Loading, Muted, RiskLozenge, Section } from '../shared/ui';
 
 type View = Extract<Awaited<ReturnType<typeof requestView>>, { found: true }>;
-type Draft = { text: string; newDate?: string; suggestedDate?: string; risk: string };
+type Draft = { text: string; newDate?: string; suggestedDate?: string; note?: string; risk: string };
+
+// Show dates the way the rest of the panel does ("Dec 18, 2026"), not as 12/18/2026.
+const DATE_FORMAT = 'MMM D, YYYY';
 
 const STATE_LABEL: Record<PromiseRecord['state'], { label: string; appearance: 'success' | 'warning' | 'danger' | 'neutral' | 'discovery' }> = {
   suggested: { label: 'Suggested', appearance: 'discovery' },
@@ -223,7 +226,7 @@ function TrackModal({ view, onClose, onDone }: { view: View; onClose: () => void
             <Text>Record what you told the customer. Kept checks it against the developer&apos;s plan from now on.</Text>
             <Stack space="space.050">
               <Label labelFor="kept-date">Promised date</Label>
-              <DatePicker id="kept-date" value={date} onChange={(v: string) => setDate(v)} minDate={view.today} placeholder="Select the date you gave" />
+              <DatePicker id="kept-date" value={date} onChange={(v: string) => setDate(v)} minDate={view.today} dateFormat={DATE_FORMAT} placeholder="Select the date you gave" />
             </Stack>
             {/* Text fields are uncontrolled: UI Kit round-trips each keystroke, and a controlled value drops fast typing. */}
             <Stack space="space.050">
@@ -308,7 +311,9 @@ function DraftModal({ view, onClose, onDone }: { view: View; onClose: () => void
     }
   };
 
-  const internal = looksInternal(text);
+  // Only keys from this request's own spaces count, so words like "UTF-8" don't raise a false alarm.
+  const spaceKeys = [view.request.key, ...view.devItems.map((d) => d.key)].map((k) => k.split('-')[0] as string);
+  const internal = looksInternal(text, spaceKeys);
   return (
     <Modal onClose={onClose} width="large">
       <ModalHeader>
@@ -328,6 +333,7 @@ function DraftModal({ view, onClose, onDone }: { view: View; onClose: () => void
                   id="kept-new-date"
                   value={newDate}
                   minDate={view.today}
+                  dateFormat={DATE_FORMAT}
                   placeholder="No new date"
                   onChange={(v: string) => {
                     setNewDate(v);
@@ -336,6 +342,7 @@ function DraftModal({ view, onClose, onDone }: { view: View; onClose: () => void
                 />
                 {draft.suggestedDate && <Muted>Plan says {formatDateWithDay(draft.suggestedDate, view.today)} at the earliest</Muted>}
               </Inline>
+              {draft.note && newDate && <Muted>{draft.note}</Muted>}
               {edited && newDate !== (draft.newDate ?? '') && (
                 <Inline space="space.100" alignBlock="center" shouldWrap>
                   <Muted>You edited the message, so it still has the old wording.</Muted>
@@ -379,6 +386,17 @@ function DraftModal({ view, onClose, onDone }: { view: View; onClose: () => void
       </ModalFooter>
     </Modal>
   );
+}
+
+/** One line for the red banner. The card below has the full reasons, so don't repeat them word for word. */
+function bannerText(p: PromiseRecord, today: string): string {
+  const promised = formatDateWithDay(p.promisedDate, today);
+  if (p.risk === 'broken') return `${p.customer} was promised ${promised}, and that date has passed.`;
+  if (p.expectedDate && p.expectedDate > p.promisedDate) {
+    return `${p.customer} was promised ${promised}, but the fix is now expected ${formatDateWithDay(p.expectedDate, today)}.`;
+  }
+  if (!p.expectedDate) return `${p.customer} was promised ${promised}, and the fix isn't planned yet.`;
+  return p.reasons[0]?.message ?? `${p.customer} was promised ${promised}.`;
 }
 
 function App() {
@@ -451,7 +469,7 @@ function App() {
       {alarm && worst && (
         <SectionMessage appearance="error" title={worst.risk === 'broken' ? 'A promise to this customer was broken' : 'A promise to this customer is at risk'}>
           <Stack space="space.100">
-            <Text>{worst.reasons[0]?.message}</Text>
+            <Text>{bannerText(worst, view.today)}</Text>
             <Inline space="space.100" shouldWrap>
               <Button appearance="primary" spacing="compact" onClick={() => setModal('draft')}>
                 Draft update

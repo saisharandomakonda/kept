@@ -48,11 +48,22 @@ export function draftCustomerUpdate(input: DraftInput): string {
     return lines.join('\n');
   }
 
-  if (risk === 'on-track' || risk === 'tight') {
+  if (risk === 'on-track') {
     lines.push(
       `A quick update on ${topic}: the fix is still on track for ${promised}.`,
       '',
       "I'll let you know as soon as it's released."
+    );
+    lines.push('', signOff(input.agentName).replace('Thanks for your patience', 'Best regards'));
+    return lines.join('\n');
+  }
+
+  if (risk === 'tight') {
+    // Honest about the small margin, without alarming the customer.
+    lines.push(
+      `A quick update on ${topic}: the fix is still planned to reach you by ${promised}, but there's little room to spare.`,
+      '',
+      "I'm watching it closely and will tell you straight away if anything changes."
     );
     lines.push('', signOff(input.agentName).replace('Thanks for your patience', 'Best regards'));
     return lines.join('\n');
@@ -86,9 +97,29 @@ export function draftCustomerUpdate(input: DraftInput): string {
   return lines.join('\n');
 }
 
-const INTERNAL_PATTERNS = [/\b[A-Z][A-Z0-9]{1,9}-\d+\b/, /\bsprint\b/i, /\bjira\b/i, /\bbacklog\b/i, /\bstory points?\b/i];
+/**
+ * The new date to offer when the plan now lands after the promise: the expected date plus the
+ * safety margin (at least a day). Used by the panel's Draft update and by the Rovo actions.
+ */
+export function suggestDate(p: { expectedDate?: IsoDate; promisedDate: IsoDate }, marginDays: number): IsoDate | undefined {
+  return p.expectedDate && p.expectedDate > p.promisedDate ? addDays(p.expectedDate, Math.max(marginDays, 1)) : undefined;
+}
 
-/** True when text seems to contain internal details (a work item key, sprint, backlog, ...). */
-export function looksInternal(text: string): boolean {
-  return INTERNAL_PATTERNS.some((p) => p.test(text));
+const INTERNAL_WORDS =[/\bsprint\b/i, /\bjira\b/i, /\bbacklog\b/i, /\bstory points?\b/i];
+const KEY_LIKE = /\b([A-Z][A-Z0-9]{1,9})-\d+\b/g;
+
+/** Space keys of the work item keys a text mentions, e.g. "BUG-12" → "BUG" (also catches "UTF-8"). */
+export function keyPrefixes(text: string): string[] {
+  return [...new Set([...text.matchAll(KEY_LIKE)].map((m) => m[1] as string))];
+}
+
+/**
+ * True when text seems to contain internal details (a work item key, sprint, backlog, ...).
+ * Pass the space keys you know about to avoid false alarms on words like "UTF-8" or "ISO-8601":
+ * then only keys from those spaces count. Without them, anything shaped like a key counts.
+ */
+export function looksInternal(text: string, spaceKeys?: readonly string[]): boolean {
+  if (INTERNAL_WORDS.some((p) => p.test(text))) return true;
+  const prefixes = keyPrefixes(text);
+  return spaceKeys ? prefixes.some((p) => spaceKeys.includes(p)) : prefixes.length > 0;
 }

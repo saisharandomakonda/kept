@@ -6,7 +6,7 @@ import {
   removedSprintIds,
   toEvidence,
 } from '../../src/domain/changes';
-import { draftCustomerUpdate, looksInternal } from '../../src/domain/draft';
+import { draftCustomerUpdate, looksInternal, suggestDate } from '../../src/domain/draft';
 import { RISK_STYLE, riskLabel } from '../../src/domain/labels';
 import { portalView } from '../../src/domain/portal';
 import { TODAY, dev, sprint, version } from '../fixtures/dev';
@@ -47,6 +47,19 @@ describe('draftCustomerUpdate', () => {
     expect(text).toContain('A quick update on your request: the fix is still on track for Thu, Dec 10.');
   });
 
+  it('is honest about a tight plan instead of calling it on track', () => {
+    const text = draftCustomerUpdate({ ...base, risk: 'tight' });
+    expect(text).toContain("still planned to reach you by Thu, Dec 10, but there's little room to spare");
+    expect(text).not.toContain('on track');
+  });
+
+  it('suggests the plan date plus the safety margin, only when the plan is late', () => {
+    expect(suggestDate({ promisedDate: '2026-12-05', expectedDate: '2026-12-16' }, 2)).toBe('2026-12-18');
+    expect(suggestDate({ promisedDate: '2026-12-05', expectedDate: '2026-12-16' }, 0)).toBe('2026-12-17');
+    expect(suggestDate({ promisedDate: '2026-12-20', expectedDate: '2026-12-16' }, 2)).toBeUndefined();
+    expect(suggestDate({ promisedDate: '2026-12-20' }, 2)).toBeUndefined();
+  });
+
   it('never leaks internal details in any situation', () => {
     for (const risk of ['on-track', 'tight', 'at-risk', 'broken', 'unplanned', 'delivered', 'unknown'] as const) {
       expect(looksInternal(draftCustomerUpdate({ ...base, risk, newDate: '2026-12-20' }))).toBe(false);
@@ -58,6 +71,11 @@ describe('draftCustomerUpdate', () => {
     expect(looksInternal('See BUG-12')).toBe(true);
     expect(looksInternal('It is in the backlog')).toBe(true);
     expect(looksInternal('The fix is on the way')).toBe(false);
+    // With the known space keys, only real keys count: "UTF-8" is a normal word.
+    expect(looksInternal("We're fixing the UTF-8 handling", ['SUP', 'BUG'])).toBe(false);
+    expect(looksInternal('Dates use ISO-8601', ['SUP', 'BUG'])).toBe(false);
+    expect(looksInternal('See BUG-12', ['SUP', 'BUG'])).toBe(true);
+    expect(looksInternal('Back in the backlog', [])).toBe(true);
   });
 });
 

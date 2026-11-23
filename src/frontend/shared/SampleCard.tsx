@@ -173,7 +173,7 @@ export function SampleCard({ onChange }: { onChange?: () => void }) {
                 <Text>
                   {status.created.sprints.length > 0
                     ? 'Open a request to see its promises. Try it: move the Acme bug to the next sprint and watch its request turn red.'
-                    : 'Open a request to see its promises. Try it: in the software space, open Releases and move v2.4 a few weeks later. Then watch the Acme request turn red.'}
+                    : "Open a request to see its promises. Try it: open the Acme bug, move its Due date three weeks later, and watch Acme's request turn red."}
                 </Text>
                 <Inline space="space.150" shouldWrap>
                   {requests.map((k, i) => (

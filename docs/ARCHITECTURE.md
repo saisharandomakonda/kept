@@ -29,7 +29,7 @@
 | `jira:issueContext` | `kept-dev-panel` | Developer work items: "Customers waiting", with a badge |
 | `jira:globalPage` | `kept-global-page` | Apps → Kept: all promises, sample scenario |
 | `jiraServiceManagement:queuePage` | `kept-queue-page` | Service space sidebar: promises for that space |
-| `jiraServiceManagement:portalRequestDetail` | `kept-portal` | Customer portal: "Fix progress" (customers and unlicensed users) |
+| `jiraServiceManagement:portalRequestDetail` | `kept-portal` | Customer portal: "Fix progress" (customers and unlicensed users), only on requests with a promise |
 | `jira:adminPage` | `kept-settings` | Jira settings → Apps → Kept |
 | `jira:entityProperty` | `kept-index` | JQL: `keptRisk`, `keptRank`, `keptPromiseDate`, `keptPromises`, `keptWaiting`, `keptEarliestPromise`, `keptAtRisk` |
 | `trigger` | issue, link, sprint, version, lifecycle | Re-check on change. The issue trigger uses `ignoreSelf`, so Kept's own notes don't wake it |
@@ -66,7 +66,7 @@
 
 ## Tests
 
-`npm run verify` runs type checking, ESLint and 129 Vitest tests:
+`npm run verify` runs type checking, ESLint and 134 Vitest tests:
 - domain tests for every rule and its wording;
 - end-to-end service tests against in-memory fakes of Jira REST and Forge KVS. The fake storage enforces Forge's real key rules.
 
