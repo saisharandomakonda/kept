@@ -128,8 +128,7 @@ function App() {
     <Stack space="space.300">
       <Inline spread="space-between" alignBlock="center">
         <Stack space="space.050">
-          {/* The queue page already has "Customer promises" as its title. */}
-          {!isQueuePage && <Heading size="large">Customer promises</Heading>}
+          {/* Jira already shows the page title ("Kept" in Apps, "Customer promises" in the queue sidebar). */}
           <Text color="color.text.subtle">
             Every fix date support gave a customer, checked against the live developer plan{isQueuePage && projectKey ? ` for ${projectKey}` : ''}.
           </Text>

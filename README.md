@@ -9,6 +9,10 @@ A Forge app for Jira Service Management, Jira and Rovo. Built for Codegeist 2026
 - **Demo video:** _added before submission_
 - **Devpost:** _added before submission_
 
+![A developer moves the bug to the next sprint, and Kept marks the customer's request At risk with the reason](docs/images/thumbnail.png)
+
+More screenshots: [Promises page](docs/images/promises-page.png) · [Rovo agent](docs/images/rovo.png) · [Draft update](docs/images/draft-update.png) · [Customer portal](docs/images/portal.png)
+
 ---
 
 ## The problem
@@ -53,6 +57,10 @@ The other sample stories show the other states: **Globex** is tight (the sprint 
 
 ## How it works
 
+![How Kept works: Jira Service Management, the Jira software space and the Forge app](docs/images/architecture.png)
+
+<details><summary>Same diagram as text (Mermaid)</summary>
+
 ```mermaid
 flowchart LR
   subgraph JSM[Jira Service Management]
@@ -77,6 +85,8 @@ flowchart LR
   E -- heads-up --> D
   K --> P & Q & A
 ```
+
+</details>
 
 - **Forge modules:** `jira:issueContext` ×2 (with live status badges), `jira:globalPage`, `jiraServiceManagement:queuePage`, `jiraServiceManagement:portalRequestDetail`, `jira:adminPage`, `jira:entityProperty` (JQL), `trigger` ×5, `scheduledTrigger`, `rovo:agent`, `action` ×5.
 - **UI:** UI Kit (`@forge/react`) with Atlassian Design System components and design tokens only, so it matches Jira, including dark mode.
