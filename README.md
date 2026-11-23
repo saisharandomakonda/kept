@@ -11,7 +11,7 @@ A Forge app for Jira Service Management, Jira and Rovo. Built for Codegeist 2026
 
 ![A developer moves the bug to the next sprint, and Kept marks the customer's request At risk with the reason](docs/images/thumbnail.png)
 
-More screenshots: [Promises page](docs/images/promises-page.png) · [Rovo agent](docs/images/rovo.png) · [Draft update](docs/images/draft-update.png) · [Customer portal](docs/images/portal.png)
+More screenshots: [Promises page](docs/images/promises-page.png) · [Rovo agent](docs/images/rovo.png) · [Draft update](docs/images/draft-update.png) · [Customer portal](docs/images/portal.png) · [Dark mode](docs/images/dark-mode.png)
 
 ---
 
@@ -108,7 +108,7 @@ flowchart LR
 </details>
 
 - **Forge modules:** `jira:issueContext` ×2 (with live status badges), `jira:globalPage`, `jiraServiceManagement:queuePage`, `jiraServiceManagement:portalRequestDetail`, `jira:adminPage`, `jira:entityProperty` (JQL), `trigger` ×5, `scheduledTrigger`, `rovo:agent`, `action` ×5.
-- **UI:** UI Kit (`@forge/react`) with Atlassian Design System components and design tokens only, (no hard-coded colours, except the chart's four status colours), so it follows Jira's look and theme.
+- **UI:** UI Kit (`@forge/react`) with Atlassian Design System components and design tokens only, (no hard-coded colours, except the chart's four status colours), so it follows Jira's light and dark themes (checked live).
 - **Storage:** Forge KVS custom entities with indexes (by request, by developer item, by state).
 - **No external calls.** The core needs no AI; the optional agent uses your site's Rovo. `forge eligibility` confirms the production version qualifies for Atlassian's "Runs on Atlassian" program.
 

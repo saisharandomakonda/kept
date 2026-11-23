@@ -19,7 +19,7 @@ const TOGGLES: { key: keyof Settings; label: string; help: string }[] = [
   { key: 'noteOnRequest', label: 'Internal note on the request', help: 'When a promise gets worse, post an internal note (agents only) with what changed.' },
   { key: 'noteOnDevIssue', label: 'Heads-up on the developer work item', help: 'Tell developers which customer their change affects.' },
   { key: 'detectPromises', label: 'Spot promises in replies', help: 'Suggest a promise when an agent replies with a date ("fixed by Friday"). Rules-based, no AI credits.' },
-  { key: 'portalEnabled', label: 'Show fix progress on the customer portal', help: 'Customers see a simple stage tracker on their own request. No internal details.' },
+  { key: 'portalEnabled', label: 'Show fix progress on the customer portal', help: 'On requests where support gave a date, customers see a simple stage tracker. No internal details.' },
   { key: 'portalShowDate', label: 'Show the planned date on the portal', help: 'Also show the date the fix is planned for.' },
 ];
 
