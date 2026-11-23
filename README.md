@@ -126,6 +126,7 @@ More detail: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) · [docs/DATA-AND-PRIV
 - Promise detection reads English date phrases ("by Friday", "end of next week", "Dec 10").
 - Dates are calendar days in UTC; there's no business-day or holiday calendar yet.
 - Items in a service space aren't treated as developer work, so link requests to a software space.
+- On portal requests without a promise, Kept shows nothing, but Jira still shows the app's "Fix progress" title under **Apps**.
 
 ## Develop
 
